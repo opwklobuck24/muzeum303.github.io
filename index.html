@@ -1,0 +1,4948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Muzeum 303</title>
+    <style>
+        :root {
+            --primary-color: #D4AF37;
+            --bg-color: #0C0C0C;
+            --text-color: #E5E5E5;
+            --hotspot-size: 40px;
+            --transition-duration: 0.8s;
+            --bg-image: url('assets/bg-tło nowe.png');
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                --bg-image: url('assets/bg-tło nowe.png');
+            }
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            background-image: var(--bg-image);
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: var(--text-color);
+            overflow: hidden;
+            touch-action: none; /* Prevent pull-to-refresh on mobile */
+        }
+
+        #app {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Home Screen */
+        #home-screen {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1a1a1a, #000000);
+            z-index: 100;
+            text-align: center;
+            padding: 2rem;
+            transition: opacity 0.5s ease;
+        }
+
+        #home-screen h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        #home-screen p {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            line-height: 1.6;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 1rem 2.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
+
+        button:active { transform: scale(0.95); }
+        button:hover { opacity: 0.9; }
+
+        /* Exhibit Container */
+        #exhibit-container {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+            background-color: var(--bg-color);
+            background-image: url('assets/bg-tło nowe.png'); background-size: cover; background-position: center; border-radius: 0;
+        }
+
+        @media (max-width: 768px) {
+            #exhibit-container {
+                
+            }
+        }
+
+        #exhibit-container.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .scene-wrapper {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            z-index: 1;
+            /* Inactive wrappers shouldn't capture clicks */
+            pointer-events: none;
+        }
+        
+        .scene-image {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .scene-hotspots {
+            position: absolute;
+            inset: 0;
+        }
+
+        /* Hotspots */
+        .hotspot {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: transform 0.2s, background-color 0.2s, color 0.2s, box-shadow 0.2s;
+            z-index: 10;
+            border-style: solid;
+        }
+
+        .hotspot:hover {
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+        
+        /* Audio Toggle */
+        #audio-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--bg-color);
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        #audio-toggle.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        #audio-toggle svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .hotspot svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* Modal */
+        #info-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        #info-modal.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 100%;
+            border: 1px solid #333;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #info-modal.active .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+            flex-shrink: 0;
+        }
+
+        .modal-text {
+            line-height: 1.6;
+            color: #ddd;
+            margin-bottom: 1.5rem;
+            overflow-y: auto;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: 1px solid #555;
+            color: white;
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .close-btn:hover {
+            background: #333;
+        }
+
+        .speak-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+            flex-shrink: 0;
+        }
+        .speak-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+        }
+        .speak-btn.playing {
+            color: var(--primary-color);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .speak-btn svg { 
+            width: 24px; 
+            height: 24px; 
+            stroke: currentColor; 
+            stroke-width: 2; 
+            fill: none; 
+            stroke-linecap: round; 
+            stroke-linejoin: round; 
+        }
+
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="home-screen">
+            <h1>Muzeum 303</h1>
+            <p>Zapraszamy do wirtualnego zwiedzania</p>
+            <button id="start-btn">Rozpocznij</button>
+        </div>
+
+        <div id="exhibit-container">
+            <div id="images-container"></div>
+        </div>
+
+        <button id="audio-toggle">
+            <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        </button>
+
+        <div id="info-modal">
+            <div class="modal-content">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
+                    <h2 class="modal-title" id="modal-title" style="margin-bottom: 0;"></h2>
+                    <button class="speak-btn" id="speak-btn" title="Read Aloud">
+                        <svg viewBox="0 0 24 24">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                        </svg>
+                    </button>
+                </div>
+                <p class="modal-text" id="modal-text"></p>
+                <button class="close-btn" id="close-modal-btn">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="fade-overlay" style="position: absolute; inset: 0; background: black; opacity: 0; pointer-events: none; z-index: 99; transition: opacity 0.5s ease;"></div>
+
+    <script>
+        const config = {
+  "title": "Muzeum 303",
+  "description": "Zapraszamy do wirtualnego zwiedzania",
+  "startButtonText": "Rozpocznij",
+  "theme": {
+    "style": "classic",
+    "color": "#D4AF37",
+    "hotspotSize": 40,
+    "backgroundImageUrl": "assets/bg-tło nowe.png",
+    "backgroundImageFileName": "tło nowe.png",
+    "mobileBackgroundImageUrl": "",
+    "mobileBackgroundImageFileName": "TŁO TELEFONY.png",
+    "defaultHotspotStyle": {
+      "variant": "square",
+      "color": "#018333"
+    },
+    "defaultHotspotType": "info",
+    "transitionType": "mix",
+    "transitionDuration": 0.8,
+    "initialTransitionType": "fade-black",
+    "initialTransitionDuration": 1.2
+  },
+  "scenes": [
+    {
+      "id": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+      "name": "1",
+      "imageUrl": "assets/01d62f07-3b02-49e0-bb17-8bed0f521f7e-1.JPG",
+      "imageFileName": "1.JPG",
+      "hotspots": [
+        {
+          "id": "41136120-0eb4-4e1b-81d3-df07a50bbd11",
+          "x": 45.068094590130976,
+          "y": 92.37596698835785,
+          "type": "dir-up",
+          "targetSceneId": "68ca5503-94cf-48aa-bbbf-bb755c3f0411",
+          "style": {
+            "variant": "minimal",
+            "color": "#009e3d",
+            "size": 69
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "30ec945b-bfb5-4257-923b-a5b3672b58d1",
+          "x": 76.61889917710248,
+          "y": 74.55065359477125,
+          "type": "zoom",
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "7246c3fa-272e-46d1-86b1-49121627d67c",
+          "x": 15.255266077378216,
+          "y": 63.61779705371732,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "9e7da14c-9ef9-4316-93eb-39b89677665d",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "e3cf6690-97aa-457d-ae4f-d243f61c56bf",
+          "x": 50,
+          "y": 14.038671233638492,
+          "type": "image",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "imageUrl": "assets/hs-e3cf6690-97aa-457d-ae4f-d243f61c56bf-obraz_2026-04-21_223444617.png",
+          "imageFileName": "obraz_2026-04-21_223444617.png",
+          "actionType": "link",
+          "linkUrl": "https://www.muzeum303.pl",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "b8e9ab6b-f726-4f43-b14a-74a2e32a4482",
+          "x": 44.005846203786255,
+          "y": 65.49393795959507,
+          "type": "dir-up",
+          "targetSceneId": "68ca5503-94cf-48aa-bbbf-bb755c3f0411",
+          "style": {
+            "variant": "minimal",
+            "color": "#009e3d",
+            "size": 69
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "75e2a3db-839c-434b-b8bd-d615b912be17",
+          "x": 88.45029421753779,
+          "y": 53.158406487426305,
+          "type": "zoom",
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5a0283fe-4681-47dc-8b04-19b6a5cfb1cf",
+          "x": 10.672510193472595,
+          "y": 57.43472147446632,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "9e7da14c-9ef9-4316-93eb-39b89677665d",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "e3cf6690-97aa-457d-ae4f-d243f61c56bf",
+          "x": 50,
+          "y": 25.36235681296401,
+          "type": "image",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "imageUrl": "assets/hs-e3cf6690-97aa-457d-ae4f-d243f61c56bf-obraz_2026-04-21_223444617.png",
+          "imageFileName": "obraz_2026-04-21_223444617.png",
+          "actionType": "link",
+          "linkUrl": "https://www.muzeum303.pl",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+      "name": "3",
+      "imageUrl": "assets/17010162-2d99-40a4-942d-3e43ef94d7e6-3.JPG",
+      "imageFileName": "3.JPG",
+      "hotspots": [
+        {
+          "id": "f296f67d-b485-41fc-8267-c058a9003b0b",
+          "x": 47.10885915340117,
+          "y": 93.80627251469052,
+          "type": "dir-down",
+          "targetSceneId": "6bb8ef85-5866-424a-b0c0-ec76e3ce8d2a",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "288aa144-8df6-4b88-b6cd-249732e134e9",
+          "x": 12.314089606789981,
+          "y": 52.20959233302697,
+          "type": "dir-left",
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "0aa22942-5d34-41a9-8f10-9024dbc4aee0",
+          "x": 50.081692856580595,
+          "y": 7.066996889441246,
+          "type": "dir-up",
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "cfc8dc25-cb2e-4ee2-a4b8-955d35bacb41",
+          "x": 54.15900286506204,
+          "y": 55.53698171977124,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333",
+            "size": 40
+          },
+          "targetSceneId": "e6c2cd74-4b3a-40d3-b4b8-1f4b7ea7b715",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "c22a8f0a-484b-40de-bb1f-5f288e8a80b3",
+          "x": 91.91176543186273,
+          "y": 47.154134341639356,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "a6bd6829-7c73-40f5-ba7f-3f67661e963f",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "7a05efaf-a668-4964-8cba-5f6b89abe87e",
+          "x": 48.94736842105264,
+          "y": 66.69133803631317,
+          "type": "dir-down",
+          "targetSceneId": "6bb8ef85-5866-424a-b0c0-ec76e3ce8d2a",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "859199da-2953-47c1-8488-316a692af7e6",
+          "x": 10.38011969475036,
+          "y": 50.36235455426185,
+          "type": "dir-left",
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "6427a09f-a47f-4b4d-929a-fdd731b1b3ba",
+          "x": 47.10526315789474,
+          "y": 27.759921251590146,
+          "type": "dir-up",
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "ccd902b5-82de-4c3e-814c-03fb141f1b31",
+          "x": 48.68420661651558,
+          "y": 49.37551402414625,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333",
+            "size": 40
+          },
+          "targetSceneId": "e6c2cd74-4b3a-40d3-b4b8-1f4b7ea7b715",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "ff007ace-68d7-4e02-a21e-1d5ced6623a2",
+          "x": 91.84210526315789,
+          "y": 49.07598462617093,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "a6bd6829-7c73-40f5-ba7f-3f67661e963f",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "6bb8ef85-5866-424a-b0c0-ec76e3ce8d2a",
+      "name": "4",
+      "imageUrl": "assets/6bb8ef85-5866-424a-b0c0-ec76e3ce8d2a-4.JPG",
+      "imageFileName": "4.JPG",
+      "hotspots": [
+        {
+          "id": "51371fe6-91b5-47a4-a61e-abaa5a8f7cfa",
+          "x": 47.25591796373094,
+          "y": 6.486018043586437,
+          "type": "dir-up",
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "fe35af54-2e6a-48fe-9d5b-aefacf27c87f",
+          "x": 48.579447256698856,
+          "y": 91.4533315259482,
+          "type": "dir-down",
+          "targetSceneId": "bd197a2e-5cf7-4572-ad9d-accefdcf4933",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "aac7c465-bbf4-4797-ad13-9c822c832d09",
+          "x": 39.72049937528722,
+          "y": 20.361703112234476,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333",
+            "size": 35
+          },
+          "targetSceneId": "0fef5179-e4c0-4e63-886a-b07159757351",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "5c58fefa-2fa6-4185-b690-b2ff076a862b",
+          "x": 62.71930391658551,
+          "y": 34.24393513621736,
+          "type": "dir-up",
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "b4ef6c32-ba2c-477b-9b17-00967dc8ee7d",
+          "x": 66.22807021066203,
+          "y": 65.16498961042177,
+          "type": "dir-down",
+          "targetSceneId": "bd197a2e-5cf7-4572-ad9d-accefdcf4933",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "462f131e-631f-4f0d-bb6d-608118c7b3d9",
+          "x": 45.17544032243907,
+          "y": 37.039987069381816,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333",
+            "size": 35
+          },
+          "targetSceneId": "0fef5179-e4c0-4e63-886a-b07159757351",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "bd197a2e-5cf7-4572-ad9d-accefdcf4933",
+      "name": "5",
+      "imageUrl": "assets/bd197a2e-5cf7-4572-ad9d-accefdcf4933-5.JPG",
+      "imageFileName": "5.JPG",
+      "hotspots": [
+        {
+          "id": "eb5f8082-221d-4f58-bbc2-8397e6ef5e98",
+          "x": 87.72978051310994,
+          "y": 46.7184111776186,
+          "type": "dir-right",
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "style": {
+            "variant": "square",
+            "color": "#99051b"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3ad83044-4cf9-4f24-909e-57778d8c0a0b",
+          "x": 45.932388670763025,
+          "y": 6.486018043586437,
+          "type": "dir-up",
+          "targetSceneId": "6bb8ef85-5866-424a-b0c0-ec76e3ce8d2a",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "18db82be-4f23-4a33-80ec-343c06c6123c",
+          "x": 88.15788765693362,
+          "y": 47.07288009733742,
+          "type": "dir-right",
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "style": {
+            "variant": "square",
+            "color": "#99051b"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "9c62557d-dffa-47d0-aaf4-3b26c593152c",
+          "x": 52.48537947119627,
+          "y": 35.23077566633295,
+          "type": "dir-up",
+          "targetSceneId": "6bb8ef85-5866-424a-b0c0-ec76e3ce8d2a",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "68ca5503-94cf-48aa-bbbf-bb755c3f0411",
+      "name": "12",
+      "imageUrl": "assets/68ca5503-94cf-48aa-bbbf-bb755c3f0411-12.JPG",
+      "imageFileName": "12.JPG",
+      "hotspots": [
+        {
+          "id": "32449f3c-8951-4ccd-93f0-ba95342f6b08",
+          "x": 25.28200486127068,
+          "y": 68.60887714460785,
+          "type": "dir-up",
+          "targetSceneId": "a73213e4-daab-4a09-9819-83902753e107",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 85
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "4212d4ef-0b2a-41e0-9811-6a70b3b13f17",
+          "x": 84.10552529727711,
+          "y": 58.15136080473856,
+          "type": "zoom",
+          "targetSceneId": "e32c566c-abcb-49dc-8e93-adabd116b3fc",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5765405f-b679-4bc7-8401-fc639ae57035",
+          "x": 63.65098392262178,
+          "y": 53.397950814440364,
+          "type": "zoom",
+          "targetSceneId": "efd80db9-6bb1-4fd4-af3e-430e565535eb",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "8ede3e61-ad3f-4165-a2d2-f41dbbe10476",
+          "x": 50.549383724437035,
+          "y": 43.41577467575572,
+          "type": "zoom",
+          "targetSceneId": "a9f3bd7b-83ed-4243-9025-49c17fb40623",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "10d9cd23-c327-4f6c-8804-67a96f26da4f",
+          "x": 29.827454510857077,
+          "y": 88.81090750102125,
+          "type": "dir-down",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 85
+          },
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "52f62b05-2840-4f4a-8c46-a71224f1196b",
+          "x": 20.906434638861835,
+          "y": 56.28340676976408,
+          "type": "dir-up",
+          "targetSceneId": "a73213e4-daab-4a09-9819-83902753e107",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 85
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "37d9bed8-e04a-453b-b683-ef6030fe8a87",
+          "x": 85.52631578947368,
+          "y": 56.03330634902278,
+          "type": "zoom",
+          "targetSceneId": "e32c566c-abcb-49dc-8e93-adabd116b3fc",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "19ff7e71-1ce5-491a-8f2c-b3d39d79a736",
+          "x": 65.05847609200922,
+          "y": 53.980777360359575,
+          "type": "zoom",
+          "targetSceneId": "efd80db9-6bb1-4fd4-af3e-430e565535eb",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "f8fef2b2-0f54-4006-abeb-1fa1c8c1c259",
+          "x": 49.8538007351684,
+          "y": 48.224199319444,
+          "type": "zoom",
+          "targetSceneId": "a9f3bd7b-83ed-4243-9025-49c17fb40623",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "d8b0eb0a-f4c8-47fd-a03d-366e2ea07431",
+          "x": 24.41520093293835,
+          "y": 64.34261422008414,
+          "type": "dir-down",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 85
+          },
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "a73213e4-daab-4a09-9819-83902753e107",
+      "name": "14",
+      "imageUrl": "assets/a73213e4-daab-4a09-9819-83902753e107-14.JPG",
+      "imageFileName": "14.JPG",
+      "hotspots": [
+        {
+          "id": "a2046649-e957-4a12-ac2f-56526626a375",
+          "x": 30.89696996352252,
+          "y": 75.73900409773285,
+          "type": "dir-up",
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 87
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "38b9773f-06ce-437e-a20c-50279f4e28d2",
+          "x": 59.10552529727712,
+          "y": 45.79248366013072,
+          "type": "zoom",
+          "targetSceneId": "aa2c8f45-b246-4092-a53f-6e88e342247c",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "2bb2ec97-85b9-4712-b4b1-c75b1dec29a3",
+          "x": 79.15900286506205,
+          "y": 56.96301030177696,
+          "type": "zoom",
+          "targetSceneId": "a9f3bd7b-83ed-4243-9025-49c17fb40623",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "2d6095e1-43c3-4e9c-946a-43f0411c3656",
+          "x": 49.61355321547564,
+          "y": 39.37536700878268,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018935"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "ed196c1e-dc96-4913-9f87-b08b23c72206"
+        },
+        {
+          "id": "a7da3032-6fe0-4ce9-9bd5-754bb851969d",
+          "x": 35.84350137149586,
+          "y": 90.80733953737746,
+          "type": "dir-down",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 93
+          },
+          "targetSceneId": "68ca5503-94cf-48aa-bbbf-bb755c3f0411",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "72c0f984-8d6b-433c-9779-01f91b8862f5",
+          "x": 31.140359084251074,
+          "y": 55.62551458882179,
+          "type": "dir-up",
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 87
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "a3857126-0457-405f-8f3d-62614bb27fe4",
+          "x": 63.88888197335639,
+          "y": 45.921565392635166,
+          "type": "zoom",
+          "targetSceneId": "aa2c8f45-b246-4092-a53f-6e88e342247c",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "702de959-2a0a-4a82-b3f3-417f0a07c3ca",
+          "x": 84.94151186157934,
+          "y": 56.44788094435073,
+          "type": "zoom",
+          "targetSceneId": "a9f3bd7b-83ed-4243-9025-49c17fb40623",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "b8e591c9-10ef-4129-8d78-e9296f107c3f",
+          "x": 50.43859779449481,
+          "y": 48.38866897662632,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018935"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "ed196c1e-dc96-4913-9f87-b08b23c72206"
+        },
+        {
+          "id": "60700875-4c03-49c0-a039-a5146cf624e3",
+          "x": 34.35671881772342,
+          "y": 63.35577820737289,
+          "type": "dir-down",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 93
+          },
+          "targetSceneId": "68ca5503-94cf-48aa-bbbf-bb755c3f0411",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "6ab72d15-5722-4d85-aef2-2f8e965ed012",
+      "name": "17",
+      "imageUrl": "assets/6ab72d15-5722-4d85-aef2-2f8e965ed012-17.jpg",
+      "imageFileName": "17.jpg",
+      "hotspots": [
+        {
+          "id": "19bf2fff-377b-48a3-881c-60fbe73eaa83",
+          "x": 45.46916737275965,
+          "y": 53.873291015625,
+          "type": "info",
+          "infoTitle": "Kontener zrzutowy",
+          "infoText": "Kontener zrzucany dla podziemia niepodległościowego wypełniony sprzętem i uzbrojeniem. Bardzo często kontenery takie zrzucano razem z Cichociemnymi.",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "216d38c7-aeb7-414b-98e1-19791456a4c8",
+          "x": 8.579450847001842,
+          "y": 50.40758316677652,
+          "type": "dir-left",
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "ef310022-902b-4e71-beb0-a8e5c24da6df",
+          "x": 91.32478153004365,
+          "y": 50.54590162888072,
+          "type": "dir-right",
+          "targetSceneId": "f28c1751-228c-433e-9f29-9fc866daae63",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "e583a9f2-a6e5-4ecf-a5db-7bac1c0aa609",
+          "x": 41.95906452708479,
+          "y": 53.81630318577292,
+          "type": "info",
+          "infoTitle": "Kontener zrzutowy",
+          "infoText": "Kontener zrzucany dla podziemia niepodległościowego wypełniony sprzętem i uzbrojeniem. Bardzo często kontenery takie zrzucano razem z Cichociemnymi.",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "50308ab2-8bd8-4b9b-84c1-93979b1fd079",
+          "x": 8.579450847001842,
+          "y": 50.40758316677652,
+          "type": "dir-left",
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "10058204-df8d-43ed-ad1e-919e8d378f19",
+          "x": 91.32478153004365,
+          "y": 50.54590162888072,
+          "type": "dir-right",
+          "targetSceneId": "f28c1751-228c-433e-9f29-9fc866daae63",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+      "name": "19",
+      "imageUrl": "assets/f6221256-48bf-456d-be6f-2b73abeef5fb-19.jpg",
+      "imageFileName": "19.jpg",
+      "hotspots": [
+        {
+          "id": "ba9ef054-6147-4a5b-827a-cca346e10038",
+          "x": 49.61355321547564,
+          "y": 93.56430951286765,
+          "type": "dir-down",
+          "targetSceneId": "f28c1751-228c-433e-9f29-9fc866daae63",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 92
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "7e29f68e-e236-42ff-993d-c283a5e0528a",
+          "x": 76.66768002968463,
+          "y": 87.00888743610157,
+          "type": "zoom",
+          "targetSceneId": "6ab72d15-5722-4d85-aef2-2f8e965ed012",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "abdf1ad0-e71c-40e1-bb3d-81b07552e7ab",
+          "x": 31.431736665613514,
+          "y": 44.00995391646242,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "9b953305-3a16-4f52-bbc0-2e3455bd47e3"
+        },
+        {
+          "id": "6f3873a1-bf0c-4b99-bcf6-38d51655ded2",
+          "x": 57.01997195973115,
+          "y": 38.51975783803104,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "fdb1047a-cda9-4c6a-9302-4dba968b7563"
+        },
+        {
+          "id": "e7fe8b29-7702-4d4e-9a64-ae74039000f4",
+          "x": 74.07878651338466,
+          "y": 45.36913105085784,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "d8a9a005-c18e-47f5-b472-aaf0639d7fa7"
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "f4af461e-6a6e-4c37-b960-5c3a0d421b77",
+          "x": 49.561410236446164,
+          "y": 61.87551063609299,
+          "type": "dir-down",
+          "targetSceneId": "f28c1751-228c-433e-9f29-9fc866daae63",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 92
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "9e3c0e6c-ea7d-4d62-b35c-146d87c393c4",
+          "x": 89.61988833619061,
+          "y": 66.97420101347062,
+          "type": "zoom",
+          "targetSceneId": "6ab72d15-5722-4d85-aef2-2f8e965ed012",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "6edb0f99-45ec-4015-b43b-08eeee4bb8d2",
+          "x": 29.678358404994086,
+          "y": 46.414987916395134,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "9b953305-3a16-4f52-bbc0-2e3455bd47e3"
+        },
+        {
+          "id": "ffb3d580-831a-4f4d-9387-0d793560d1e7",
+          "x": 58.04094350385618,
+          "y": 45.757091218048515,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "fdb1047a-cda9-4c6a-9302-4dba968b7563"
+        },
+        {
+          "id": "bf3111bb-3008-4bf5-9c2c-ad8f73381264",
+          "x": 78.80116683147496,
+          "y": 46.414987916395134,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "d8a9a005-c18e-47f5-b472-aaf0639d7fa7"
+        }
+      ]
+    },
+    {
+      "id": "f28c1751-228c-433e-9f29-9fc866daae63",
+      "name": "20",
+      "imageUrl": "assets/f28c1751-228c-433e-9f29-9fc866daae63-20.jpg",
+      "imageFileName": "20.jpg",
+      "hotspots": [
+        {
+          "id": "6850f939-498f-4dbb-af69-ba39120e7666",
+          "x": 87.71514443790211,
+          "y": 79.30406358506944,
+          "type": "dir-up",
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 88
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "043ac705-262d-47dd-9ccc-fb3da1a264f6",
+          "x": 82.634937061983,
+          "y": 92.85130718954248,
+          "type": "dir-down",
+          "style": {
+            "variant": "minimal",
+            "color": "#018433",
+            "size": 83
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb"
+        },
+        {
+          "id": "a894ccb6-f3fe-436f-bc04-97daaf94891d",
+          "x": 30.696442547966452,
+          "y": 51.06877744587418,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "ed196c1e-dc96-4913-9f87-b08b23c72206",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "8fa50697-fe9d-4e49-94ce-c219ddc38f72",
+          "x": 86.40351254083633,
+          "y": 58.75051487115957,
+          "type": "dir-up",
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "style": {
+            "variant": "minimal",
+            "color": "#018333",
+            "size": 88
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "44ffdcaa-9dca-46af-8c68-b1ce067d8098",
+          "x": 77.92397927342631,
+          "y": 65.8228772739597,
+          "type": "dir-down",
+          "style": {
+            "variant": "minimal",
+            "color": "#018433",
+            "size": 83
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb"
+        },
+        {
+          "id": "09813bf2-1d6c-42ed-8817-6edb160f87e6",
+          "x": 30.696442547966452,
+          "y": 51.06877744587418,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "ed196c1e-dc96-4913-9f87-b08b23c72206",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+      "name": "Scene 10",
+      "imageUrl": "assets/c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9-6.JPG",
+      "imageFileName": "6.JPG",
+      "hotspots": [
+        {
+          "id": "f74661ec-b270-484b-a334-f591f1f130ae",
+          "x": 77.15365690343519,
+          "y": 47.931522543913395,
+          "type": "dir-right",
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "cff3a865-9c09-452f-8d93-ce2788c1c80f",
+          "x": 50.68306866814108,
+          "y": 88.81090750102125,
+          "type": "dir-down",
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "style": {
+            "variant": "square",
+            "color": "#83010e"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5f2c81a5-8579-4031-851f-cfc885dc1c07",
+          "x": 43.19644254796645,
+          "y": 41.03906569138072,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333",
+            "size": 40
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "dddafd4f-8af2-4808-bc75-29f3c121aee1"
+        },
+        {
+          "id": "6443f7e5-e8dd-4fa7-adf5-97ab7b1d393a",
+          "x": 64.47368421052632,
+          "y": 41.23048456111946,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoText": "Od góry z lewej:  nieoficjalna odznaka pamiątkowa 1.SBS (tzw. sweetheart). \nPo prawej: Odznaka pamiątkowa 4.Brygady Kadrowej Strzelców (poprzedniczki 1.SBS).\nNa dole od lewej: Zwykły Znak Spadochronowy produkcji firmy Kirkwood&Son (K&S), Zwykły Znak Spadochronowy wykonany przez Grupę Techniczną Ośrodka Radio Sztabu Naczelnego Wodza (GT), Bojowy Znak Spadochronowy (GT), Znak Spadochronowy Armii Krajowej (nadawany Cichociemnym).\nPo prawej na dole: Bojowa Odznaka Szybowcowa (z wieńcem) i Zwykła Odznaka Szybowcowa.",
+          "infoTitle": "Insygnia 1 SBS",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "9e3013f2-eead-42b7-9e63-9f97898d9965",
+          "x": 83.18713674548205,
+          "y": 52.50051430648403,
+          "type": "dir-right",
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "249e76d2-2ba8-423e-a32b-11014ae3752e",
+          "x": 51.31578535254345,
+          "y": 69.11235173088413,
+          "type": "dir-down",
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "style": {
+            "variant": "square",
+            "color": "#83010e"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "f225337f-1a45-491d-a182-c96e0ff20c52",
+          "x": 44.29825276439042,
+          "y": 41.80972458018181,
+          "type": "zoom",
+          "style": {
+            "variant": "square",
+            "color": "#018333",
+            "size": 40
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "dddafd4f-8af2-4808-bc75-29f3c121aee1"
+        },
+        {
+          "id": "6443f7e5-e8dd-4fa7-adf5-97ab7b1d393a",
+          "x": 64.47368421052632,
+          "y": 41.23048456111946,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoText": "Od góry z lewej:  nieoficjalna odznaka pamiątkowa 1.SBS (tzw. sweetheart). \nPo prawej: Odznaka pamiątkowa 4.Brygady Kadrowej Strzelców (poprzedniczki 1.SBS).\nNa dole od lewej: Zwykły Znak Spadochronowy produkcji firmy Kirkwood&Son (K&S), Zwykły Znak Spadochronowy wykonany przez Grupę Techniczną Ośrodka Radio Sztabu Naczelnego Wodza (GT), Bojowy Znak Spadochronowy (GT), Znak Spadochronowy Armii Krajowej (nadawany Cichociemnym).\nPo prawej na dole: Bojowa Odznaka Szybowcowa (z wieńcem) i Zwykła Odznaka Szybowcowa.",
+          "infoTitle": "Insygnia 1 SBS",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "efd80db9-6bb1-4fd4-af3e-430e565535eb",
+      "name": "IMG_4256",
+      "imageUrl": "assets/efd80db9-6bb1-4fd4-af3e-430e565535eb-IMG_4256.JPG",
+      "imageFileName": "IMG_4256.JPG",
+      "hotspots": [
+        {
+          "id": "95bafe0d-0f32-49fb-817d-ea19fc36214e",
+          "x": 35.44242858886719,
+          "y": 49.35754314746732,
+          "type": "dir-left",
+          "targetSceneId": "a9f3bd7b-83ed-4243-9025-49c17fb40623",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "38b299a7-2c6c-4d46-a717-6afb9fbdaa20",
+          "x": 64.1857416489545,
+          "y": 49.119873046875,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333",
+            "size": 40
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "e32c566c-abcb-49dc-8e93-adabd116b3fc"
+        },
+        {
+          "id": "06a738af-0291-4662-a4ff-29a657b193ae",
+          "x": 49.591499814067184,
+          "y": 36.98710626443252,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Instruktor spadochronowy ",
+          "infoText": "Instruktor spadochronowy 1.Samodzielnej Brygady Spadochronowej z Sekcji Polskiej\nprzy brytyjskiej No 1. Parachute Training School w Ringway. 1943r.\nSpadochroniarz ubrany jest w mundur battle dress z pasem i kask spadochronowy, tzw. ,,toczek”.     Na rękach ma białe rękawiczki pilota, dobrze widoczne w półmroku wnętrza samolotu. Gesty rąk instruktora wskazywały szkolonym skoczkom kolejne czynności, jakie mieli oni wykonać, aby prawidłowo wykonać skok."
+        },
+        {
+          "id": "5d3cae25-9d26-474c-9326-529034ecd254",
+          "x": 49.880932078642005,
+          "y": 92.61362911049837,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830122"
+          },
+          "targetSceneId": "a73213e4-daab-4a09-9819-83902753e107",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "bec52789-70b3-47b5-a8ce-d2410e7b593a",
+          "x": 12.719291870174057,
+          "y": 47.07288009733742,
+          "type": "dir-left",
+          "targetSceneId": "a9f3bd7b-83ed-4243-9025-49c17fb40623",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "9125be80-342f-454b-a4b5-2a3fba504cbb",
+          "x": 82.60233968615564,
+          "y": 46.579462090981785,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333",
+            "size": 40
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "e32c566c-abcb-49dc-8e93-adabd116b3fc"
+        },
+        {
+          "id": "c4749983-ff9f-4f94-aaa4-81534afb8045",
+          "x": 45.36842747738487,
+          "y": 33.86314969397494,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Instruktor spadochronowy ",
+          "infoText": "Instruktor spadochronowy 1.Samodzielnej Brygady Spadochronowej z Sekcji Polskiej\nprzy brytyjskiej No 1. Parachute Training School w Ringway. 1943r.\nSpadochroniarz ubrany jest w mundur battle dress z pasem i kask spadochronowy, tzw. ,,toczek”.     Na rękach ma białe rękawiczki pilota, dobrze widoczne w półmroku wnętrza samolotu. Gesty rąk instruktora wskazywały szkolonym skoczkom kolejne czynności, jakie mieli oni wykonać, aby prawidłowo wykonać skok."
+        },
+        {
+          "id": "2a7e69c2-2818-446c-8c9f-557cca68605d",
+          "x": 50.43859779449481,
+          "y": 66.64525266429732,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830122"
+          },
+          "targetSceneId": "a73213e4-daab-4a09-9819-83902753e107",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "e32c566c-abcb-49dc-8e93-adabd116b3fc",
+      "name": "IMG_4238",
+      "imageUrl": "assets/e32c566c-abcb-49dc-8e93-adabd116b3fc-IMG_4238.jpg",
+      "imageFileName": "IMG_4238.jpg",
+      "hotspots": [
+        {
+          "id": "d8a7fe70-395f-41cb-9f34-fba0f2675cce",
+          "x": 32.50125211827895,
+          "y": 51.02124183006536,
+          "type": "dir-left",
+          "targetSceneId": "efd80db9-6bb1-4fd4-af3e-430e565535eb",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "d21eb666-952b-41fb-99b7-d5a6f78df6a7",
+          "x": 48.93173666561351,
+          "y": 94.4674702563317,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83010e"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "a73213e4-daab-4a09-9819-83902753e107"
+        },
+        {
+          "id": "172efc44-76d7-469f-a0f8-2e64d70f5f02",
+          "x": 45.068094590130976,
+          "y": 42.70276437397876,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Cichociemny",
+          "infoText": "Cichociemny żołnierz Armii Krajowej w chwili wylądowania na polskiej ziemi w okupowanym kraju.\nSkoczkowie ci oddawali skok w kombinezonie maskowniczym SOE, nałożonym na specjalnie spreparowane ubranie cywilne, typowe do stylu i dostępności w okupowanej Polsce. \nW kieszeni ma przygotowane dokumenty legalizacyjne, czyli Kenkartę oraz gazetę okupacyjną \n,,Nowy Kurier Warszawski”, zwaną ,,gadzinówką”. \nNa głowie widoczny jeszcze kask kombinezonu zrzutowego z okularami, który po skoku skoczek razem z kombinezonem i spadochronem zakopywał w ziemi. Cichociemni przez odlotem do Kraju byli zaprzysięgani na rotę przysięgi Armii Krajowej. Ich tradycje przejęła w Polsce Jednostka Wojskowa GROM."
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "0846c1b7-d041-43c3-8b0f-a1a98ae9857e",
+          "x": 8.040931457444726,
+          "y": 52.829458138252996,
+          "type": "dir-left",
+          "targetSceneId": "efd80db9-6bb1-4fd4-af3e-430e565535eb",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3406de30-cea1-4513-9109-345c8df8480a",
+          "x": 49.26900367584199,
+          "y": 72.07287783863524,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83010e"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "a73213e4-daab-4a09-9819-83902753e107"
+        },
+        {
+          "id": "d8931818-ca72-4e91-b840-a1278606c112",
+          "x": 32.10526315789474,
+          "y": 41.086893892563126,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Cichociemny",
+          "infoText": "Cichociemny żołnierz Armii Krajowej w chwili wylądowania na polskiej ziemi w okupowanym kraju.\nSkoczkowie ci oddawali skok w kombinezonie maskowniczym SOE, nałożonym na specjalnie spreparowane ubranie cywilne, typowe do stylu i dostępności w okupowanej Polsce. \nW kieszeni ma przygotowane dokumenty legalizacyjne, czyli Kenkartę oraz gazetę okupacyjną \n,,Nowy Kurier Warszawski”, zwaną ,,gadzinówką”. \nNa głowie widoczny jeszcze kask kombinezonu zrzutowego z okularami, który po skoku skoczek razem z kombinezonem i spadochronem zakopywał w ziemi. Cichociemni przez odlotem do Kraju byli zaprzysięgani na rotę przysięgi Armii Krajowej. Ich tradycje przejęła w Polsce Jednostka Wojskowa GROM."
+        }
+      ]
+    },
+    {
+      "id": "a9f3bd7b-83ed-4243-9025-49c17fb40623",
+      "name": "IMG_4235",
+      "imageUrl": "assets/a9f3bd7b-83ed-4243-9025-49c17fb40623-IMG_4235.JPG",
+      "imageFileName": "IMG_4235.JPG",
+      "hotspots": [
+        {
+          "id": "5f18ac40-faf0-4c52-912f-6b92594fe623",
+          "x": 65.52264494054457,
+          "y": 51.49658203125001,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "efd80db9-6bb1-4fd4-af3e-430e565535eb"
+        },
+        {
+          "id": "e42c2155-abb8-4159-b1c5-0051097335cd",
+          "x": 33.704461490406715,
+          "y": 51.25891193065768,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "aa2c8f45-b246-4092-a53f-6e88e342247c",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "f7023a04-f1aa-4218-86e0-8ebdda3aa7d3",
+          "x": 48.7846778420841,
+          "y": 93.6831565308415,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "a73213e4-daab-4a09-9819-83902753e107"
+        },
+        {
+          "id": "de192c28-5596-4597-87d3-8c5a3f1713fe",
+          "x": 47.20713447122013,
+          "y": 55.061641518586605,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Oficer sztabowy  1.SBS",
+          "infoText": "Oficer sztabowy 1.Samodzielnej Brygady Spadochronowej. Okres po bitwie, koniec roku 1944.\nOficer nosi mundur battle dres bez kurtki, z podstawowym oporządzeniem oficerskim pat.37. Jako broń osobistą używa amerykańskiego pistoletu Colt 1911 A1 kal. 11,43 mm. W mapniku widoczna jest mapa sztabowa rejonu przeprawy przez Ren w rejonie  Arnhem-Oosterbeek-Driel, gdzie walczyli polscy spadochroniarze."
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "6dfdded4-8d7b-4584-8e67-fcf134957b00",
+          "x": 86.40351254083633,
+          "y": 50.8557770780218,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "efd80db9-6bb1-4fd4-af3e-430e565535eb"
+        },
+        {
+          "id": "a8200f08-07a7-4d28-9bdb-f78fd801695e",
+          "x": 6.8713534006738435,
+          "y": 51.842617608137395,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "aa2c8f45-b246-4092-a53f-6e88e342247c",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "c1d721c2-376b-4f12-a99c-974eaf7294c1",
+          "x": 47.51461249786277,
+          "y": 75.69130064473299,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "a73213e4-daab-4a09-9819-83902753e107"
+        },
+        {
+          "id": "257e69c3-791b-41ef-9e0b-482c50c1a52d",
+          "x": 46.05262788048771,
+          "y": 52.33604013189736,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Oficer sztabowy  1.SBS",
+          "infoText": "Oficer sztabowy 1.Samodzielnej Brygady Spadochronowej. Okres po bitwie, koniec roku 1944.\nOficer nosi mundur battle dres bez kurtki, z podstawowym oporządzeniem oficerskim pat.37. Jako broń osobistą używa amerykańskiego pistoletu Colt 1911 A1 kal. 11,43 mm. W mapniku widoczna jest mapa sztabowa rejonu przeprawy przez Ren w rejonie  Arnhem-Oosterbeek-Driel, gdzie walczyli polscy spadochroniarze."
+        }
+      ]
+    },
+    {
+      "id": "aa2c8f45-b246-4092-a53f-6e88e342247c",
+      "name": "IMG_4172",
+      "imageUrl": "assets/aa2c8f45-b246-4092-a53f-6e88e342247c-IMG_4172.JPG",
+      "imageFileName": "IMG_4172.JPG",
+      "hotspots": [
+        {
+          "id": "bdd6592b-681d-4aff-80cb-ea83a0a720e5",
+          "x": 41.057402666877294,
+          "y": 48.64453284569036,
+          "type": "dir-left",
+          "targetSceneId": "ed196c1e-dc96-4913-9f87-b08b23c72206",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "797d2750-c35e-4aee-b77e-95ac64f492b5",
+          "x": 48.142964980181524,
+          "y": 93.56430951286765,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830108"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "a73213e4-daab-4a09-9819-83902753e107"
+        },
+        {
+          "id": "bb71b1c6-bd57-4db3-a99f-8fc071b1a8c5",
+          "x": 64.31943556841682,
+          "y": 50.07055344924428,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "a9f3bd7b-83ed-4243-9025-49c17fb40623"
+        },
+        {
+          "id": "733b5f39-2366-4dc3-b09f-c3d76873b4da",
+          "x": 52.55472968606389,
+          "y": 46.03015376072304,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Kurs spadochronowy",
+          "infoText": "Żołnierz 1.Samodzielnej Brygady Spadochronowej w czasie kursu spadochronowego w Ringway. Lato 1944.\nŻołnierz ubrany jest w mundur battle dress, na którym posiada kurtkę przeznaczoną do skoku spadochronowego. Jej zadaniem jest zakrycie noszonego przez żołnierza oporządzenia, o które mogą zaczepić się wyplatające się linki spadochronowe podczas otwierania spadochronu. Nakrycie głowy stanowi  hełm spadochronowy At mk2 z parcianymi paskami mocującymi ostatniego, wojennego typu. Na bokach dzwonu hełmu znajdują się znaki przynależności do pododdziału, co świadczy, że  jest to okres przedbitewny. Za taśmy uprzęży spadochronu włożony jest do skoku pistolet maszynowy Sten Mk 2 z charakterystyczną dla spadochroniarzy zmniejszoną kolbą, stanowiącą jedynie rodzaj chwytu pistoletowego. "
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "ab7fbb14-f8a9-4ab9-a9e2-cd9bc0380fbc",
+          "x": 16.52046472485474,
+          "y": 46.25051374180848,
+          "type": "dir-left",
+          "targetSceneId": "ed196c1e-dc96-4913-9f87-b08b23c72206",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "d8ec152a-90d5-4b9d-bef7-0467dd228acb",
+          "x": 49.8538007351684,
+          "y": 73.88208924168411,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830108"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "a73213e4-daab-4a09-9819-83902753e107"
+        },
+        {
+          "id": "4bd62f1d-268a-46be-abd0-a7289934321b",
+          "x": 92.54385757094072,
+          "y": 48.88209150038628,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "a9f3bd7b-83ed-4243-9025-49c17fb40623"
+        },
+        {
+          "id": "d347a0db-8d47-4044-9b4e-67028ac30e60",
+          "x": 65.78947368421053,
+          "y": 40.968473670903094,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Kurs spadochronowy",
+          "infoText": "Żołnierz 1.Samodzielnej Brygady Spadochronowej w czasie kursu spadochronowego w Ringway. Lato 1944.\nŻołnierz ubrany jest w mundur battle dress, na którym posiada kurtkę przeznaczoną do skoku spadochronowego. Jej zadaniem jest zakrycie noszonego przez żołnierza oporządzenia, o które mogą zaczepić się wyplatające się linki spadochronowe podczas otwierania spadochronu. Nakrycie głowy stanowi  hełm spadochronowy At mk2 z parcianymi paskami mocującymi ostatniego, wojennego typu. Na bokach dzwonu hełmu znajdują się znaki przynależności do pododdziału, co świadczy, że  jest to okres przedbitewny. Za taśmy uprzęży spadochronu włożony jest do skoku pistolet maszynowy Sten Mk 2 z charakterystyczną dla spadochroniarzy zmniejszoną kolbą, stanowiącą jedynie rodzaj chwytu pistoletowego. "
+        }
+      ]
+    },
+    {
+      "id": "ed196c1e-dc96-4913-9f87-b08b23c72206",
+      "name": "IMG_4233",
+      "imageUrl": "assets/ed196c1e-dc96-4913-9f87-b08b23c72206-IMG_4233.JPG",
+      "imageFileName": "IMG_4233.JPG",
+      "hotspots": [
+        {
+          "id": "cb080d2d-7dd7-476c-b8b4-fbc664f38141",
+          "x": 33.30338870777803,
+          "y": 50.122549019607845,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "6ab72d15-5722-4d85-aef2-2f8e965ed012",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "29ec124a-6134-41b9-aa6d-7449d30ae855",
+          "x": 50.01461702234605,
+          "y": 91.42528658598856,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "targetSceneId": "f28c1751-228c-433e-9f29-9fc866daae63",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3aa07015-748a-4fe3-8c1e-fb05380ef031",
+          "x": 64.98787823845359,
+          "y": 50.07055344924428,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "aa2c8f45-b246-4092-a53f-6e88e342247c",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "1e5176e1-f725-4d4f-80ce-8d6dbe79b730",
+          "x": 49.96114843031939,
+          "y": 48.715836269403596,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Operacja ,,Market-Garden”",
+          "infoText": "Spadochroniarz 1.Samodzielnej Brygady Spadochronowej z Powietrznej Kompanii Łączności,            w czasie pracy na radiostacji WS-68. Operacja ,,Market-Garden”. Wrzesień 1944 r.\nSpadochroniarz ubrany jest w mundur battle dress ze spodniami w wersji spadochronowej, kurtkę Denison Smock i hełm AT-mk2 ze starszą, skórzaną wersją pasków mocujących. Jego uzbrojeniem jest pistolet maszynowy Sten mk 2, z charakterystyczną dla spadochroniarzy, pomniejszoną kolbą. Umundurowanie i ekwipunek przedstawia okres udziału jednostki w największej w historii operacji powietrznodesantowej ,,Market-Garden” we wrześniu 1944 r. \nTradycję 1.Samodzielnej Brygady Spadochronowej przejęła w Polsce 6.Brygada Powietrznodesantowa im. gen. Stanisława Sosabowskiego."
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "5e791c9c-1f49-4e52-8082-2becce112c4f",
+          "x": 10.38011969475036,
+          "y": 50.19788037967518,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "6ab72d15-5722-4d85-aef2-2f8e965ed012",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "38986519-cd11-4d4b-821d-dba04680ac02",
+          "x": 52.77778603180043,
+          "y": 76.51366700026192,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "targetSceneId": "f28c1751-228c-433e-9f29-9fc866daae63",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "10f06273-f71f-4b26-9533-7dc8a52a5abd",
+          "x": 90.20466933363508,
+          "y": 49.37551402414625,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "aa2c8f45-b246-4092-a53f-6e88e342247c",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "94ed2bbc-1e53-481c-9d75-2eb93ffcec38",
+          "x": 53.07017653052267,
+          "y": 50.36235455426185,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Operacja ,,Market-Garden”",
+          "infoText": "Spadochroniarz 1.Samodzielnej Brygady Spadochronowej z Powietrznej Kompanii Łączności,            w czasie pracy na radiostacji WS-68. Operacja ,,Market-Garden”. Wrzesień 1944 r.\nSpadochroniarz ubrany jest w mundur battle dress ze spodniami w wersji spadochronowej, kurtkę Denison Smock i hełm AT-mk2 ze starszą, skórzaną wersją pasków mocujących. Jego uzbrojeniem jest pistolet maszynowy Sten mk 2, z charakterystyczną dla spadochroniarzy, pomniejszoną kolbą. Umundurowanie i ekwipunek przedstawia okres udziału jednostki w największej w historii operacji powietrznodesantowej ,,Market-Garden” we wrześniu 1944 r. \nTradycję 1.Samodzielnej Brygady Spadochronowej przejęła w Polsce 6.Brygada Powietrznodesantowa im. gen. Stanisława Sosabowskiego."
+        }
+      ]
+    },
+    {
+      "id": "d8a9a005-c18e-47f5-b472-aaf0639d7fa7",
+      "name": "IMG_4181",
+      "imageUrl": "assets/d8a9a005-c18e-47f5-b472-aaf0639d7fa7-IMG_4181.JPG",
+      "imageFileName": "IMG_4181.JPG",
+      "hotspots": [
+        {
+          "id": "2316ac08-30c5-47e4-84f8-270045b0546c",
+          "x": 50.549383724437035,
+          "y": 56.297535615808826,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Komandos SKC",
+          "infoText": "Komandos Samodzielnej Kompanii Commando w czasie działań na froncie włoskim w rejonie Pescopennataro. Grudzień 1943 r.\n\nKompania polskich komandosów obsadziła tam opuszczoną przez Brytyjczyków górską placówkę, będącą dla Polaków bazą do wypadów na teren zajęty przez wroga. Komandos ubrany jest  w wełniany brytyjski mundur battle dress i skórzany serdak, będący zabezpieczeniem przez górskim klimatem.         Na głowie ma popularną czapkę wykonywaną z wełnianego szalika przez oddziały Commando, tzw. ,,myckę”. Żołnierz używa prostego sprzętu wspinaczkowego, jak czekan i konopne liny, służącego do pokonywania skalistych podejść."
+        },
+        {
+          "id": "08997c66-1066-4ab2-89cb-6c200f63b0cd",
+          "x": 68.06274862850414,
+          "y": 52.20959233302697,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "6ab72d15-5722-4d85-aef2-2f8e965ed012",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "b13a4c55-057d-4e84-9c51-fb77a65bef7e",
+          "x": 32.31408960678998,
+          "y": 51.06877744587418,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "fdb1047a-cda9-4c6a-9302-4dba968b7563",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "1d3f91a4-5f9e-46b2-a9cf-13eae515e722",
+          "x": 48.34350137149586,
+          "y": 92.37596698835785,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "b42bb6f8-6e81-44b4-a02b-dfbc01441630",
+          "x": 50.549383724437035,
+          "y": 56.297535615808826,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Komandos SKC",
+          "infoText": "Komandos Samodzielnej Kompanii Commando w czasie działań na froncie włoskim w rejonie Pescopennataro. Grudzień 1943 r.\n\nKompania polskich komandosów obsadziła tam opuszczoną przez Brytyjczyków górską placówkę, będącą dla Polaków bazą do wypadów na teren zajęty przez wroga. Komandos ubrany jest  w wełniany brytyjski mundur battle dress i skórzany serdak, będący zabezpieczeniem przez górskim klimatem.         Na głowie ma popularną czapkę wykonywaną z wełnianego szalika przez oddziały Commando, tzw. ,,myckę”. Żołnierz używa prostego sprzętu wspinaczkowego, jak czekan i konopne liny, służącego do pokonywania skalistych podejść."
+        },
+        {
+          "id": "b482b71c-2fc1-4f68-b6c8-fa7e710a9c1f",
+          "x": 87.28070009888498,
+          "y": 50.69130290343515,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "6ab72d15-5722-4d85-aef2-2f8e965ed012",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "9ec311ff-7bef-4c78-87ac-a55f5dd11f88",
+          "x": 8.918135077375306,
+          "y": 55.78998424600411,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "fdb1047a-cda9-4c6a-9302-4dba968b7563",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "2a59dc23-d69f-4066-b7c3-3cbaf5b585bf",
+          "x": 45.17544032243907,
+          "y": 78.3228784033108,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "fdb1047a-cda9-4c6a-9302-4dba968b7563",
+      "name": "Scene 17",
+      "imageUrl": "assets/fdb1047a-cda9-4c6a-9302-4dba968b7563-IMG_4178.JPG",
+      "imageFileName": "IMG_4178.JPG",
+      "hotspots": [
+        {
+          "id": "e5c04a3e-a214-4b5f-afac-f34a9ad1f78f",
+          "x": 48.276649923885564,
+          "y": 90.23692810457517,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "e2599ac8-ab39-4162-91c4-bbf2bd3352ea",
+          "x": 49.22585431267233,
+          "y": 48.715836269403596,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoText": "Oficer Samodzielnej Kompanii Commando w angielskim mundurze wyjściowym \nOfficer’s Service Dress pat.39). 1943/1944 r.\nDo munduru oficer nosi regulaminowy brytyjski pas oficerski z koalicyjką. Za nakrycie głowy służy zielony beret oddziałów Commando, przysługujący jedynie certyfikowanym jednostką, których  żołnierze ukończyli kurs Commando Depot w Achnacarry. Na piersi  oficer nosi Zwykły Znak Spadochronowy, świadczący o ukończeniu szkolenia spadochronowego w Ringway. W Samodzielnej Kompanii Commando kilkunastu żołnierzy, w tym oficerów, ukończyło taki kurs. \nTradycje Samodzielnej Kompanii Commando przejęła w Polsce Jednostka Wojskowa Komandosów - Zespół Bojowy B.",
+          "infoTitle": "Oficer SKC"
+        },
+        {
+          "id": "7cfbc8ea-4642-4855-a9c4-f815edd77009",
+          "x": 63.34350137149587,
+          "y": 48.192960452410134,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "d8a9a005-c18e-47f5-b472-aaf0639d7fa7",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "eb970ac9-b284-4f34-a0bd-1989f1f22924",
+          "x": 37.04670176786535,
+          "y": 46.980834163092325,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "9b953305-3a16-4f52-bbc0-2e3455bd47e3",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "1f4b425b-8e7b-4a7a-b038-e9c87dd697bc",
+          "x": 45.4678308211613,
+          "y": 75.85577933672397,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "94746e69-0b6b-4aad-b9b2-2e8230b7d165",
+          "x": 48.68420661651558,
+          "y": 45.59261704346186,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Oficer SKC",
+          "infoText": "Oficer Samodzielnej Kompanii Commando w angielskim mundurze wyjściowym \nOfficer’s Service Dress pat.39). 1943/1944 r.\nDo munduru oficer nosi regulaminowy brytyjski pas oficerski z koalicyjką. Za nakrycie głowy służy zielony beret oddziałów Commando, przysługujący jedynie certyfikowanym jednostką, których  żołnierze ukończyli kurs Commando Depot w Achnacarry. Na piersi  oficer nosi Zwykły Znak Spadochronowy, świadczący o ukończeniu szkolenia spadochronowego w Ringway. W Samodzielnej Kompanii Commando kilkunastu żołnierzy, w tym oficerów, ukończyło taki kurs. \nTradycje Samodzielnej Kompanii Commando przejęła w Polsce Jednostka Wojskowa Komandosów - Zespół Bojowy B."
+        },
+        {
+          "id": "8d8c3b69-46af-4685-8a5c-84812beb655c",
+          "x": 89.32748177558643,
+          "y": 46.74393626556844,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "d8a9a005-c18e-47f5-b472-aaf0639d7fa7",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "401d676b-947a-4ec2-8596-7f513f9688ee",
+          "x": 5.701759282021028,
+          "y": 49.37551402414625,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "9b953305-3a16-4f52-bbc0-2e3455bd47e3",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "9b953305-3a16-4f52-bbc0-2e3455bd47e3",
+      "name": "Scene 18",
+      "imageUrl": "assets/9b953305-3a16-4f52-bbc0-2e3455bd47e3-IMG_4177.JPG",
+      "imageFileName": "IMG_4177.JPG",
+      "hotspots": [
+        {
+          "id": "17323be7-d43d-4db0-82c3-48d557148184",
+          "x": 63.91836278578814,
+          "y": 49.35754314746732,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "fdb1047a-cda9-4c6a-9302-4dba968b7563",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "a8da5ca9-e1d6-4bd3-bf8e-4f24607b5d85",
+          "x": 47.34081941492418,
+          "y": 91.42528658598856,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "eb3fe084-cc80-458f-bdec-1921bfd27766",
+          "x": 47.6082072538488,
+          "y": 46.980834163092325,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoText": "Żołnierz Samodzielnej Kompanii Grenadierów. Sierpień 1944.\nGrenadier nosi brytyjski mundur battle dress z szaro-wiśniowymi patkami i spadochronową kurtkę Denison Smock, ale na brytyjskim pasie do oporządzenia zawieszono amerykańskie ładownice do amerykańskiego pistoletu maszynowego (zazwyczaj UD-42 Merlin). \nJako broń osobistą w kaburze pod pachą grenadier nosi amerykański Colt 1911A1.  Chętnie używano także amerykańskich brązowych butów spadochronowych typu Corcoran. Na głowie szary beret SKG     z haftowanym orłem. Do skoku zakładano płócienny hełm od kombinezonu maskowniczego SOE.",
+          "infoTitle": "Grenadier SKG"
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "5e7fb359-ad9f-46e6-a48f-d78eb726b5bb",
+          "x": 87.57309059760722,
+          "y": 48.88209150038628,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "fdb1047a-cda9-4c6a-9302-4dba968b7563",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "0c01f07d-7ded-4728-b68c-411257035f66",
+          "x": 45.76023738176547,
+          "y": 73.71761958450179,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "f6221256-48bf-456d-be6f-2b73abeef5fb",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "7616346d-57fa-4583-b4c7-5ab9f031b84d",
+          "x": 44.3157958984375,
+          "y": 46.2974649595585,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Grenadier SKG",
+          "infoText": "Żołnierz Samodzielnej Kompanii Grenadierów. Sierpień 1944.\nGrenadier nosi brytyjski mundur battle dress z szaro-wiśniowymi patkami i spadochronową kurtkę Denison Smock, ale na brytyjskim pasie do oporządzenia zawieszono amerykańskie ładownice do amerykańskiego pistoletu maszynowego (zazwyczaj UD-42 Merlin). \nJako broń osobistą w kaburze pod pachą grenadier nosi amerykański Colt 1911A1.  Chętnie używano także amerykańskich brązowych butów spadochronowych typu Corcoran. Na głowie szary beret SKG     z haftowanym orłem. Do skoku zakładano płócienny hełm od kombinezonu maskowniczego SOE."
+        }
+      ]
+    },
+    {
+      "id": "0fef5179-e4c0-4e63-886a-b07159757351",
+      "name": "Scene 19",
+      "imageUrl": "assets/0fef5179-e4c0-4e63-886a-b07159757351-20260402_150927.jpg",
+      "imageFileName": "20260402_150927.jpg",
+      "hotspots": [
+        {
+          "id": "e101d06e-28ae-4ef6-91f6-fdf085127a18",
+          "x": 75.54937474867877,
+          "y": 51.02124183006536,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "7a2a7267-2cbf-43c1-8a33-a28415df9daa",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5a94ee9d-02c3-46e1-ada8-cd6608a621f4",
+          "x": 40.25526607737822,
+          "y": 41.27673579197304,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Beret"
+        },
+        {
+          "id": "958b26d4-b276-46a0-baca-9a1ee1715abe",
+          "x": 32.50125211827895,
+          "y": 93.08896931168302,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "6bb8ef85-5866-424a-b0c0-ec76e3ce8d2a",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "801eac34-6aaf-4609-ae6f-e9b3b4cb0aac",
+          "x": 91.95906051161431,
+          "y": 50.52682872884849,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "7a2a7267-2cbf-43c1-8a33-a28415df9daa",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "ae78d52b-a9ea-4e97-a22d-dffa0f4491df",
+          "x": 41.37426746775838,
+          "y": 41.97419875476846,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Beret"
+        },
+        {
+          "id": "6ec37f78-a768-408c-9d37-6de1c030b53a",
+          "x": 25.29240455286893,
+          "y": 70.26366643558639,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "6bb8ef85-5866-424a-b0c0-ec76e3ce8d2a",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "7a2a7267-2cbf-43c1-8a33-a28415df9daa",
+      "name": "Scene 20",
+      "imageUrl": "assets/7a2a7267-2cbf-43c1-8a33-a28415df9daa-20260402_150937.jpg",
+      "imageFileName": "20260402_150937.jpg",
+      "hotspots": [
+        {
+          "id": "1088af1f-0ece-4b2a-960c-167aace56a36",
+          "x": 27.421035766601566,
+          "y": 49.35754314746732,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "0fef5179-e4c0-4e63-886a-b07159757351",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "c145c466-d00d-4d66-a661-d1e62c84591b",
+          "x": 50.25526607737822,
+          "y": 92.11452907986111,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "6bb8ef85-5866-424a-b0c0-ec76e3ce8d2a",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "75f96208-c9d4-43dc-a97c-693a035ba39d",
+          "x": 10.38011969475036,
+          "y": 49.37551402414625,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "0fef5179-e4c0-4e63-886a-b07159757351",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5fb38023-4b95-4d0b-87fa-d3c4c9a5ef6f",
+          "x": 47.807019058466935,
+          "y": 72.73077453698187,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "6bb8ef85-5866-424a-b0c0-ec76e3ce8d2a",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "9f330f85-c7eb-4426-b08f-9546240375d4",
+      "name": "Scene 21",
+      "imageUrl": "assets/9f330f85-c7eb-4426-b08f-9546240375d4-przód 1964.png",
+      "imageFileName": "przód 1964.png",
+      "hotspots": [
+        {
+          "id": "1a90fd24-6e44-492d-af7d-8ea758504d61",
+          "x": 69.3627418641266,
+          "y": 48.9696787739929,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018322"
+          },
+          "targetSceneId": "c0fdc929-60c1-43a4-847c-bcfe0eba9996",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "9772e295-1687-45b9-b9ba-084c5fe27c34",
+          "x": 47.01997195973116,
+          "y": 90.284463720384,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830108"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "015cdb24-0729-44dd-aef5-6ea462ca40b1",
+          "x": 28.891624001895682,
+          "y": 52.20959233302697,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#014083"
+          },
+          "targetSceneId": "264ef35e-18b9-4b65-acd2-ff6a4b7d3ae5",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "43bc3413-1248-43fb-9c33-c9d54ef57e22",
+          "x": 88.15788765693362,
+          "y": 51.67814343355075,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018322"
+          },
+          "targetSceneId": "c0fdc929-60c1-43a4-847c-bcfe0eba9996",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "2f367b22-ea6c-4aa5-a834-9402b41b2c64",
+          "x": 47.807019058466935,
+          "y": 77.99393005413748,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830108"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "494537e0-2359-428a-a7d8-669106f12073",
+          "x": 12.134510872729583,
+          "y": 41.64525040559515,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#014083"
+          },
+          "targetSceneId": "264ef35e-18b9-4b65-acd2-ff6a4b7d3ae5",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileBackgroundUrl": "assets/mobile-bg-9f330f85-c7eb-4426-b08f-9546240375d4-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundUrl": "assets/bg-9f330f85-c7eb-4426-b08f-9546240375d4-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "c0fdc929-60c1-43a4-847c-bcfe0eba9996",
+      "name": "Scene 22",
+      "imageUrl": "assets/c0fdc929-60c1-43a4-847c-bcfe0eba9996-tył 1964.png",
+      "imageFileName": "tył 1964.png",
+      "hotspots": [
+        {
+          "id": "5c9e2b0e-95b8-43a9-90d9-d48584db6d40",
+          "x": 47.4611484303194,
+          "y": 92.11452907986111,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830101"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "958641a0-3777-4754-91e6-8ce51807de14",
+          "x": 71.3235230099377,
+          "y": 52.9638669510293,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#013a83"
+          },
+          "targetSceneId": "52d7ac3d-479d-4320-bf5f-0f966063bad7",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "ba88c1c1-6550-43f9-9239-f905b6a9cc04",
+          "x": 32.50125211827895,
+          "y": 50.07055344924428,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "9f330f85-c7eb-4426-b08f-9546240375d4",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3f32662c-6cc2-413f-a4a6-580eb00a288b",
+          "x": 52.1929729105921,
+          "y": 49.24393107055345,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Jan Biały CC",
+          "infoText": "Jan Biały, ps. „Kadłub”, „Pokrywka” - pułkownik pilot Wojska Polskiego, dowódca 304 Dywizjonu Bombowego „Ziemi Śląskiej”, Cichociemny.\nPrzeszkolony ze specjalnością w lotnictwie na kursach specjalnych dla kandydatów na cichociemnych, m.in. dywersyjno–strzeleckim, podstaw wywiadu, taktyczno-informacyjnym, pilotażu i obsługi sprzętu niemieckiego: samolotów He-111H, Bf110C i Ju-88A, spadochronowym, odprawowym.  Zaprzysiężony na rotę AK 5 listopada 1943 roku.\n\n[image:qbezvw]\n\nSkok do Polski 27/28 kwietnia 1944 roku w sezonie operacyjnym „Riposta”, w operacji lotniczej „Weller 21\", z samolotu Liberator EV-978 „R” (1586 Eskadra PAF) na placówkę odbiorczą „Koza”, w okolicach miejscowości Bychawka, Bystrzyca, 18 km od Lublina.\nZnak Spadochronowy Armii Krajowej nr 189-/1964 – znajduje się wraz z mundurem lotniczym w Muzeum Dywizjonu 303.",
+          "infoImages": [
+            {
+              "id": "qbezvw",
+              "url": "assets/hsinfo-3f32662c-6cc2-413f-a4a6-580eb00a288b-qbezvw-obraz_2026-04-26_212239521.png",
+              "fileName": "obraz_2026-04-26_212239521.png"
+            }
+          ],
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "95fae12d-1439-4f45-951e-41eaef4e0647",
+          "x": 48.97661317711975,
+          "y": 76.3491973430796,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830101"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5d8a0ab9-958d-409e-9e50-cac362b0c6c2",
+          "x": 87.86549715821138,
+          "y": 49.2110398495596,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#013a83"
+          },
+          "targetSceneId": "52d7ac3d-479d-4320-bf5f-0f966063bad7",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "9889e27b-71e8-4a39-a131-1051bf3483fd",
+          "x": 8.918135077375306,
+          "y": 53.980777360359575,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "9f330f85-c7eb-4426-b08f-9546240375d4",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3f32662c-6cc2-413f-a4a6-580eb00a288b",
+          "x": 52.1929729105921,
+          "y": 49.24393107055345,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Jan Biały CC",
+          "infoText": "Jan Biały, ps. „Kadłub”, „Pokrywka” - pułkownik pilot Wojska Polskiego, dowódca 304 Dywizjonu Bombowego „Ziemi Śląskiej”, Cichociemny.\nPrzeszkolony ze specjalnością w lotnictwie na kursach specjalnych dla kandydatów na cichociemnych, m.in. dywersyjno–strzeleckim, podstaw wywiadu, taktyczno-informacyjnym, pilotażu i obsługi sprzętu niemieckiego: samolotów He-111H, Bf110C i Ju-88A, spadochronowym, odprawowym.  Zaprzysiężony na rotę AK 5 listopada 1943 roku.\n\n[image:qbezvw]\n\nSkok do Polski 27/28 kwietnia 1944 roku w sezonie operacyjnym „Riposta”, w operacji lotniczej „Weller 21\", z samolotu Liberator EV-978 „R” (1586 Eskadra PAF) na placówkę odbiorczą „Koza”, w okolicach miejscowości Bychawka, Bystrzyca, 18 km od Lublina.\nZnak Spadochronowy Armii Krajowej nr 189-/1964 – znajduje się wraz z mundurem lotniczym w Muzeum Dywizjonu 303.",
+          "infoImages": [
+            {
+              "id": "qbezvw",
+              "url": "assets/hsinfo-3f32662c-6cc2-413f-a4a6-580eb00a288b-qbezvw-obraz_2026-04-26_212239521.png",
+              "fileName": "obraz_2026-04-26_212239521.png"
+            }
+          ],
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileBackgroundUrl": "assets/mobile-bg-c0fdc929-60c1-43a4-847c-bcfe0eba9996-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundUrl": "assets/bg-c0fdc929-60c1-43a4-847c-bcfe0eba9996-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "264ef35e-18b9-4b65-acd2-ff6a4b7d3ae5",
+      "name": "brązowy tył",
+      "imageUrl": "assets/264ef35e-18b9-4b65-acd2-ff6a4b7d3ae5-brązowy tył.png",
+      "imageFileName": "brązowy tył.png",
+      "hotspots": [
+        {
+          "id": "b522b3d5-787f-43c6-a109-ebacbf3530c6",
+          "x": 39.31943556841682,
+          "y": 89.99925002553104,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3e1f511c-4764-4f3f-bd90-0e67ad6a0bf3",
+          "x": 74.1013045276144,
+          "y": 53.254354379343916,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#014083"
+          },
+          "targetSceneId": "9f330f85-c7eb-4426-b08f-9546240375d4",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "b45ec416-a8e8-4bc6-8856-e1db21455fd2",
+          "x": 33.0882323241979,
+          "y": 52.38289209440008,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "dddafd4f-8af2-4808-bc75-29f3c121aee1",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5d9bc8a9-9606-4c5e-82f6-3042d56608ea",
+          "x": 52.48537947119627,
+          "y": 48.88209150038628,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoText": "Bomb. Bolesław Górka, żołnierz 1.SBS, Dywizjonu Artylerii Przeciwpancernej, uczestnik bitwy pod Arnhem. \nPamiątki: Bojowy Znak Spadochronowy 2274/2059, beret 1.SBS  - w posiadaniu Muzeum Dywizjonu 303.",
+          "infoTitle": "Bomb. Bolesław Górka 1.SBS",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "a5cdf3f0-8ca4-43c3-be94-1dc82960a2ff",
+          "x": 52.48537947119627,
+          "y": 85.55972401550626,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "e67ae2b7-f945-4716-a560-27e42e5cac88",
+          "x": 94.88304580824635,
+          "y": 49.53998819873291,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#014083"
+          },
+          "targetSceneId": "9f330f85-c7eb-4426-b08f-9546240375d4",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "336adede-a01b-47f0-ab8f-f3f0c63264bf",
+          "x": 8.625728516771135,
+          "y": 51.02025125260846,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "dddafd4f-8af2-4808-bc75-29f3c121aee1",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5d9bc8a9-9606-4c5e-82f6-3042d56608ea",
+          "x": 55.70175526655055,
+          "y": 48.88209150038628,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoText": "Bomb. Bolesław Górka, żołnierz 1.SBS, Dywizjonu Artylerii Przeciwpancernej, uczestnik bitwy pod Arnhem. \nPamiątki: Bojowy Znak Spadochronowy 2274/2059, beret 1.SBS  - w posiadaniu Muzeum Dywizjonu 303.",
+          "infoTitle": "Bomb. Bolesław Górka 1.SBS",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-264ef35e-18b9-4b65-acd2-ff6a4b7d3ae5-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-264ef35e-18b9-4b65-acd2-ff6a4b7d3ae5-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "dddafd4f-8af2-4808-bc75-29f3c121aee1",
+      "name": "brązowy",
+      "imageUrl": "assets/dddafd4f-8af2-4808-bc75-29f3c121aee1-brązowy.png",
+      "imageFileName": "brązowy.png",
+      "hotspots": [
+        {
+          "id": "7e4b6e45-4d6d-4aca-973d-e0e91d277bb1",
+          "x": 48.34350137149586,
+          "y": 90.02302581188727,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3725c0a5-9e87-4052-a5fb-d21a16a82f32",
+          "x": 72.14052338180332,
+          "y": 56.449708112353505,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "264ef35e-18b9-4b65-acd2-ff6a4b7d3ae5",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "5a9cf541-abbc-46a4-974e-4460598d0ca8",
+          "x": 51.900582411869856,
+          "y": 78.98077510165741,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "2498713b-fa0b-4120-8905-10c9f25b3bf7",
+          "x": 92.54385757094072,
+          "y": 53.32288066201296,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "264ef35e-18b9-4b65-acd2-ff6a4b7d3ae5",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-dddafd4f-8af2-4808-bc75-29f3c121aee1-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-dddafd4f-8af2-4808-bc75-29f3c121aee1-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "52d7ac3d-479d-4320-bf5f-0f966063bad7",
+      "name": "son przód",
+      "imageUrl": "assets/52d7ac3d-479d-4320-bf5f-0f966063bad7-son przód.png",
+      "imageFileName": "son przód.png",
+      "hotspots": [
+        {
+          "id": "145ca994-3fbd-464f-8bbd-2d38f546dbf8",
+          "x": 49.22585431267233,
+          "y": 91.06877744587419,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "75ec6c8c-e83f-4a5a-ac4b-7447743946b7",
+          "x": 68.38234680334232,
+          "y": 53.83532923597314,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018347"
+          },
+          "targetSceneId": "97ad3048-d49f-406c-8b89-aced5fb4ac79",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5ad485dc-a6a2-4a83-a382-dd633efd9a80",
+          "x": 33.30338870777803,
+          "y": 44.12878497753268,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#014b83"
+          },
+          "targetSceneId": "c0fdc929-60c1-43a4-847c-bcfe0eba9996",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "85cf7b65-29ac-4d8c-9f0c-6817a46525bb",
+          "x": 48.39181611779335,
+          "y": 86.21762071385288,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "650619bf-bf89-4f5b-aafe-54c1f42eb816",
+          "x": 85.52630892090575,
+          "y": 48.88209150038628,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018347"
+          },
+          "targetSceneId": "97ad3048-d49f-406c-8b89-aced5fb4ac79",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "bfa95593-0e4e-4ad6-acbb-448b697bcc29",
+          "x": 20.32163757953543,
+          "y": 45.26367321169288,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#014b83"
+          },
+          "targetSceneId": "c0fdc929-60c1-43a4-847c-bcfe0eba9996",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-52d7ac3d-479d-4320-bf5f-0f966063bad7-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-52d7ac3d-479d-4320-bf5f-0f966063bad7-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "97ad3048-d49f-406c-8b89-aced5fb4ac79",
+      "name": "son tył",
+      "imageUrl": "assets/97ad3048-d49f-406c-8b89-aced5fb4ac79-son tył.png",
+      "imageFileName": "son tył.png",
+      "hotspots": [
+        {
+          "id": "871142c0-ba99-4381-9218-12b182162013",
+          "x": 48.1209117107695,
+          "y": 88.40322150709592,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "e18f603f-c27d-46b4-a294-c8ea569e8bbc",
+          "x": 68.19644254796646,
+          "y": 50.54590162888072,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#013a83"
+          },
+          "targetSceneId": "a84b1919-30f0-44dc-99a4-3dae5839b3b9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "fa1264f9-a1cd-49a1-9d48-fe4d63a790cd",
+          "x": 35.84350137149586,
+          "y": 49.23871208639706,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "52d7ac3d-479d-4320-bf5f-0f966063bad7",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "a3198179-5ee9-4b01-9300-1e3af5a7ad6b",
+          "x": 44.60783614144393,
+          "y": 49.448976249028526,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Antoni Pospieszalski CC",
+          "infoText": "Antoni Pospieszalski vel Edward Ewert vel Anthony Currie, pseud. „Rosomak”, „Łuk”, „Profesor”, „Trepka”. Cichociemny, instruktor łączności.\n[image:10ptov]\nZrzucony do Polski w operacji „Freston”, w nocy z 26 na 27 grudnia 1944,                                   w okolicach Bystrzanowic, jako Anthony Currie , tłumacz i oficer łącznikowy brytyjskiej misji wojskowej SOE ,,Freston”. Jej celem było nawiązanie kontaktu z dowództwem AK oraz „ułatwienie kontaktów z Armią Czerwoną”. Razem z nim zrzucono czterech Brytyjczyków.\n\nZnak Spadochronowy Armii Krajowej nr 973/1913– znajduje się w Muzeum Dywizjonu 303.",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "fdf3bf69-98dc-476d-87cc-914967d0846b",
+          "x": 47.22222199914053,
+          "y": 80.29656849835065,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "2088e647-dc21-4336-ba24-7a064cdb53b5",
+          "x": 84.35673086413486,
+          "y": 49.04656567497294,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#013a83"
+          },
+          "targetSceneId": "a84b1919-30f0-44dc-99a4-3dae5839b3b9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "512259a8-d2d7-4c25-b0b8-556b5d7dff0c",
+          "x": 13.888885988826875,
+          "y": 50.69130290343515,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "52d7ac3d-479d-4320-bf5f-0f966063bad7",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "a3198179-5ee9-4b01-9300-1e3af5a7ad6b",
+          "x": 34.64912537832759,
+          "y": 49.581105613028484,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Antoni Pospieszalski CC",
+          "infoText": "Antoni Pospieszalski vel Edward Ewert vel Anthony Currie, pseud. „Rosomak”, „Łuk”, „Profesor”, „Trepka”. Cichociemny, instruktor łączności.\n[image:10ptov]\nZrzucony do Polski w operacji „Freston”, w nocy z 26 na 27 grudnia 1944,                                   w okolicach Bystrzanowic, jako Anthony Currie , tłumacz i oficer łącznikowy brytyjskiej misji wojskowej SOE ,,Freston”. Jej celem było nawiązanie kontaktu z dowództwem AK oraz „ułatwienie kontaktów z Armią Czerwoną”. Razem z nim zrzucono czterech Brytyjczyków.\n\nZnak Spadochronowy Armii Krajowej nr 973/1913– znajduje się w Muzeum Dywizjonu 303.",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-97ad3048-d49f-406c-8b89-aced5fb4ac79-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-97ad3048-d49f-406c-8b89-aced5fb4ac79-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "a84b1919-30f0-44dc-99a4-3dae5839b3b9",
+      "name": "orzeł srebrny przód",
+      "imageUrl": "assets/a84b1919-30f0-44dc-99a4-3dae5839b3b9-orzeł srebrny przód.png",
+      "imageFileName": "orzeł srebrny przód.png",
+      "hotspots": [
+        {
+          "id": "3b6db5cd-1a25-491f-b110-aece21a06604",
+          "x": 48.93790310687767,
+          "y": 90.72712093361282,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "355223f7-7577-4179-880c-a968998c86a8",
+          "x": 71.13761004279641,
+          "y": 52.922602634803916,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "c3bf1862-ba85-48d5-b026-02b12013c6a9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "287486a4-6f54-4247-a249-7209883c9253",
+          "x": 26.388888514898994,
+          "y": 52.09241264453662,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#014083"
+          },
+          "targetSceneId": "97ad3048-d49f-406c-8b89-aced5fb4ac79",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "195558c0-9480-4f81-92f1-2d5d5d761fd1",
+          "x": 52.19298897247403,
+          "y": 79.80314145718634,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830115"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "204382f4-88d8-44c8-a2f7-fd90d3f3670d",
+          "x": 85.23391842218352,
+          "y": 52.829458138252996,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "c3bf1862-ba85-48d5-b026-02b12013c6a9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "ba6d9a9b-6c6c-4d47-8777-d2419316aa2f",
+          "x": 9.502932136701714,
+          "y": 51.18472542719512,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#014083"
+          },
+          "targetSceneId": "97ad3048-d49f-406c-8b89-aced5fb4ac79",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-a84b1919-30f0-44dc-99a4-3dae5839b3b9-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-a84b1919-30f0-44dc-99a4-3dae5839b3b9-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "79c40260-6e97-4438-97f6-88dabeb1e826",
+      "name": "orzeł srebrny tył",
+      "imageUrl": "assets/79c40260-6e97-4438-97f6-88dabeb1e826-orzeł srebrny tył.png",
+      "imageFileName": "orzeł srebrny tył.png",
+      "hotspots": [
+        {
+          "id": "e8419844-8948-4861-9eb2-8f1618e3a0c1",
+          "x": 49.34617435230928,
+          "y": 93.32664739072712,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5828b1be-4d6c-4b70-9dc1-3e4fb66bbd29",
+          "x": 74.74723815917969,
+          "y": 52.20959233302697,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#014b83"
+          },
+          "targetSceneId": "190415fb-3930-418e-804e-893c1b7526e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "b15bf0b3-a079-41c2-9fbc-35cd28eb49c6",
+          "x": 31.781047885576324,
+          "y": 54.416304092602374,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "a84b1919-30f0-44dc-99a4-3dae5839b3b9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "9c2b0579-9b4e-4da9-aa1c-8fb0984421d5",
+          "x": 43.21895435836304,
+          "y": 62.25944072174345,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoText": "Zwykły Znak Spadochronowy nr. 1092 kpr. Józefa Drybczewskiego z Dywizjonu Artylerii Przeciwpancernej 1.SBS. Uczestnik operacji \"Market-Garden\". II rzut morski,",
+          "infoTitle": "Zwykły Znak Spadochronowy",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "be1ccf88-da2e-4835-a1d2-68fbe649c046",
+          "x": 49.8538007351684,
+          "y": 82.27024955858184,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "2751f41d-63f8-4f57-80b1-62cee65ecbc1",
+          "x": 84.6491213628571,
+          "y": 51.18472542719512,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#014b83"
+          },
+          "targetSceneId": "190415fb-3930-418e-804e-893c1b7526e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "4c80781e-0dec-42a4-b58e-4001e9731012",
+          "x": 18.274855902833966,
+          "y": 50.8557770780218,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "a84b1919-30f0-44dc-99a4-3dae5839b3b9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "9c2b0579-9b4e-4da9-aa1c-8fb0984421d5",
+          "x": 43.21895435836304,
+          "y": 62.25944072174345,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoText": "Zwykły Znak Spadochronowy nr. 1092 kpr. Józefa Drybczewskiego z Dywizjonu Artylerii Przeciwpancernej 1.SBS. Uczestnik operacji \"Market-Garden\". II rzut morski,",
+          "infoTitle": "Zwykły Znak Spadochronowy",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-79c40260-6e97-4438-97f6-88dabeb1e826-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-79c40260-6e97-4438-97f6-88dabeb1e826-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "c3bf1862-ba85-48d5-b026-02b12013c6a9",
+      "name": "inny brąz tył",
+      "imageUrl": "assets/c3bf1862-ba85-48d5-b026-02b12013c6a9-inny brąz tył.png",
+      "imageFileName": "inny brąz tył.png",
+      "hotspots": [
+        {
+          "id": "7ffbe05c-222d-40e9-9199-5ad3ab7545bb",
+          "x": 49.81408960678998,
+          "y": 92.89884280535131,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830101"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "31b4b414-0c1c-4f53-b412-7a88141003f4",
+          "x": 32.434635617008375,
+          "y": 70.39306477919915,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "190415fb-3930-418e-804e-893c1b7526e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "eb92607c-20b8-4074-ac7f-da83a50944dd",
+          "x": 48.28430639968815,
+          "y": 57.03067499053157,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoText": "produkcji Kirkwood & Son bez nadanego numeru.",
+          "infoTitle": "Zwykły Znak Spadochronowy",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "0a099580-c1ae-454d-89f9-228a492d3a16",
+          "x": 46.92983150041829,
+          "y": 80.13208980635966,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830101"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "eb3e52ad-5712-4a22-981f-7d61f6eebf13",
+          "x": 22.076028757514653,
+          "y": 37.36893541855513,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "190415fb-3930-418e-804e-893c1b7526e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "7d1c7b85-1e12-4460-97fd-d0f5673c284b",
+          "x": 49.561410236446164,
+          "y": 50.69130290343515,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoText": "produkcji Kirkwood & Son bez nadanego numeru.",
+          "infoTitle": "Zwykły Znak Spadochronowy",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-c3bf1862-ba85-48d5-b026-02b12013c6a9-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-c3bf1862-ba85-48d5-b026-02b12013c6a9-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "190415fb-3930-418e-804e-893c1b7526e6",
+      "name": "inny brąz",
+      "imageUrl": "assets/190415fb-3930-418e-804e-893c1b7526e6-inny brąz.png",
+      "imageFileName": "inny brąz.png",
+      "hotspots": [
+        {
+          "id": "3f6e912d-c575-48e1-b204-3385b0157ba4",
+          "x": 69.68954021772136,
+          "y": 49.47803376815626,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018322"
+          },
+          "targetSceneId": "c3bf1862-ba85-48d5-b026-02b12013c6a9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5c831bd5-2555-4be4-8dd3-f7bc7e4bbfde",
+          "x": 43.490560195025274,
+          "y": 92.37596698835785,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83010e"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "43879687-6703-46ff-a52c-d0b96dc97fda",
+          "x": 32.36755819881664,
+          "y": 53.16028071384804,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#014483"
+          },
+          "targetSceneId": "79c40260-6e97-4438-97f6-88dabeb1e826",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "fc2e27f5-2636-4d49-bc45-46f34208963e",
+          "x": 81.725152128107,
+          "y": 54.638669541301866,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#014b83"
+          },
+          "targetSceneId": "c3bf1862-ba85-48d5-b026-02b12013c6a9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "6d54e02b-0193-4aec-9f88-0890079bcb32",
+          "x": 47.22222199914053,
+          "y": 80.78998650470628,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83010e"
+          },
+          "targetSceneId": "c2b6e8b9-4ec6-417a-a4b0-4ed77f86d8c9",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "7a67c304-793d-415b-ba87-7215d51758d0",
+          "x": 16.52046472485474,
+          "y": 52.66498848107067,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "79c40260-6e97-4438-97f6-88dabeb1e826",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-190415fb-3930-418e-804e-893c1b7526e6-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-190415fb-3930-418e-804e-893c1b7526e6-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "6341711c-7774-4d34-a8d1-e1acaffd9342",
+      "name": "20260402_140751",
+      "imageUrl": "assets/6341711c-7774-4d34-a8d1-e1acaffd9342-naszywka bez tła.png",
+      "imageFileName": "naszywka bez tła.png",
+      "hotspots": [
+        {
+          "id": "de71d856-e134-40ca-a94c-fc72aba0c5ef",
+          "x": 74.34617435230928,
+          "y": 51.49658203125001,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "e6c2cd74-4b3a-40d3-b4b8-1f4b7ea7b715",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "156a5d47-35d8-4456-aa26-6729b6e6e4df",
+          "x": 51.48520525764017,
+          "y": 90.94993042790033,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83010e"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "d7664c81-6d9b-4037-9137-155daed0769a",
+          "x": 33.77193782027895,
+          "y": 63.520247864555216,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Odznaka pamiątkowa 1.SBS (tzw. sweetheart )",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "89510f58-c3ee-4b44-b14e-0d61ea70be84",
+          "x": 89.32748177558643,
+          "y": 50.19788037967518,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "e6c2cd74-4b3a-40d3-b4b8-1f4b7ea7b715",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "170ef0f0-6939-4d53-b26e-eb4123bdef74",
+          "x": 50.43859779449481,
+          "y": 81.4478832030529,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83010e"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "d7664c81-6d9b-4037-9137-155daed0769a",
+          "x": 33.77193782027895,
+          "y": 63.520247864555216,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Odznaka pamiątkowa 1.SBS (tzw. sweetheart )",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-6341711c-7774-4d34-a8d1-e1acaffd9342-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-6341711c-7774-4d34-a8d1-e1acaffd9342-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "e6c2cd74-4b3a-40d3-b4b8-1f4b7ea7b715",
+      "name": "20260402_152041",
+      "imageUrl": "assets/e6c2cd74-4b3a-40d3-b4b8-1f4b7ea7b715-Grawe driel arhem to srebrne.png",
+      "imageFileName": "Grawe driel arhem to srebrne.png",
+      "hotspots": [
+        {
+          "id": "cff708de-09ef-4f62-9fe0-44c83453e2a8",
+          "x": 83.70445251464844,
+          "y": 46.03015376072304,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "bf5120fe-e8c7-48c4-abf9-34cffa6fbfec",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "1042a51f-bd47-413b-bd9b-408090b301ff",
+          "x": 15.790023803710938,
+          "y": 46.50549396190768,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "6341711c-7774-4d34-a8d1-e1acaffd9342",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "48e4bd77-97bc-4c1a-ae11-cd943c0f557c",
+          "x": 49.81408960678998,
+          "y": 91.85309117136438,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830101"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "2ce98c15-6a00-4f5b-98c1-89fdc64f5b82",
+          "x": 78.83986719110221,
+          "y": 67.48819847450417,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoText": "Należała do Albina Łakomego vel Tomasza Sarneka, pseud.: ,,Twornik”, ,,Brzęczyk” – starszy sierżant lotnictwa,\nradiomechanik i radiotelegrafista, Cichociemny.\nZaprzysiężony 4 marca 1943 roku w Oddziale VI Sztabu Naczelnego Wodza i przeniesiony do\nGłównej Bazy Przerzutowej w Brindisi we Włoszech. Skok do Polski z 9/10 kwietnia 1944\nroku w ramach operacji „Weller 1”. Dostał przydział do Oddziału V Łączności sztabu Okręgu\nLublin AK, do oddziału partyzanckiego „Pająk”, będącego oddziałem radiołączności Komendy\nOkręgu, na stanowisko oficera teletechnicznego. Obsługiwał radiostację Komendy Okręgu\nw okresie od 1 maja do 30 lipca 1944 roku. Prowadził szkolenia dla żołnierzy i dowodził\nplutonem. Brał jednocześnie udział w wielu walkach, m.in.: w Pamięcinie, Walentynowie,\nPilaszkowicach i Piaskach Luterskich.\n[image:ky78ml]\nPamiątki z czasu służby w 1.SBS: papierośnica z insygniami i grawerunkiem 1.SBS, scyzoryk\nz grawerunkiem, gwizdek z grawerunkiem i odznaką pamiątkową 1.SBS (tzw. sweetheart )\n– w posiadaniu Muzeum Dywizjonu 303.",
+          "infoTitle": "Papierośnica z insygniami i grawerunkiem 1.SBS",
+          "infoImages": [
+            {
+              "id": "ky78ml",
+              "url": "assets/hsinfo-2ce98c15-6a00-4f5b-98c1-89fdc64f5b82-ky78ml-obraz_2026-04-25_190511692.png",
+              "fileName": "obraz_2026-04-25_190511692.png"
+            }
+          ],
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "1a924bfc-1bde-4113-ab93-7a218d098a90",
+          "x": 90.49707589423926,
+          "y": 46.74393626556844,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "bf5120fe-e8c7-48c4-abf9-34cffa6fbfec",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "953e0356-6ef2-4567-942d-43053769adb4",
+          "x": 6.578946840069673,
+          "y": 46.579462090981785,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "6341711c-7774-4d34-a8d1-e1acaffd9342",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3f51e22e-c81c-4f0d-a3e3-44916de18271",
+          "x": 48.39181611779335,
+          "y": 75.52683098755067,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830101"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3479ee95-86d3-4ded-b22a-91c7371cfc24",
+          "x": 52.19298897247403,
+          "y": 27.829460396955163,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Papierośnica z insygniami i grawerunkiem 1.SBS",
+          "infoText": "Należała do Albina Łakomego vel Tomasza Sarneka, pseud.: ,,Twornik”, ,,Brzęczyk” – starszy sierżant lotnictwa,\nradiomechanik i radiotelegrafista, Cichociemny.\nZaprzysiężony 4 marca 1943 roku w Oddziale VI Sztabu Naczelnego Wodza i przeniesiony do\nGłównej Bazy Przerzutowej w Brindisi we Włoszech. Skok do Polski z 9/10 kwietnia 1944\nroku w ramach operacji „Weller 1”. Dostał przydział do Oddziału V Łączności sztabu Okręgu\nLublin AK, do oddziału partyzanckiego „Pająk”, będącego oddziałem radiołączności Komendy\nOkręgu, na stanowisko oficera teletechnicznego. Obsługiwał radiostację Komendy Okręgu\nw okresie od 1 maja do 30 lipca 1944 roku. Prowadził szkolenia dla żołnierzy i dowodził\nplutonem. Brał jednocześnie udział w wielu walkach, m.in.: w Pamięcinie, Walentynowie,\nPilaszkowicach i Piaskach Luterskich.\n[image:ky78ml]\nPamiątki z czasu służby w 1.SBS: papierośnica z insygniami i grawerunkiem 1.SBS, scyzoryk\nz grawerunkiem, gwizdek z grawerunkiem i odznaką pamiątkową 1.SBS (tzw. sweetheart )\n– w posiadaniu Muzeum Dywizjonu 303.",
+          "infoImages": [
+            {
+              "id": "ky78ml",
+              "url": "assets/hsinfo-3479ee95-86d3-4ded-b22a-91c7371cfc24-ky78ml-obraz_2026-04-25_190511692.png",
+              "fileName": "obraz_2026-04-25_190511692.png"
+            }
+          ],
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-e6c2cd74-4b3a-40d3-b4b8-1f4b7ea7b715-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-e6c2cd74-4b3a-40d3-b4b8-1f4b7ea7b715-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "bf5120fe-e8c7-48c4-abf9-34cffa6fbfec",
+      "name": "20260413_153711",
+      "imageUrl": "assets/bf5120fe-e8c7-48c4-abf9-34cffa6fbfec-nożeyk bez tła.png",
+      "imageFileName": "nożeyk bez tła.png",
+      "hotspots": [
+        {
+          "id": "4dfa332e-c57c-4c07-95b8-a2f33b4ca4d3",
+          "x": 59.51997195973115,
+          "y": 48.192960452410134,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "03a41bac-a6eb-4c3f-925c-0729add2de8a",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "43afc316-65e7-4f7d-a32c-0ca2925af1fa",
+          "x": 39.372913136201745,
+          "y": 46.88577090992647,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "e6c2cd74-4b3a-40d3-b4b8-1f4b7ea7b715",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "e1acd829-426c-4831-a445-3defec9bb7dc",
+          "x": 50.1082072538488,
+          "y": 90.02302581188727,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830101"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "0964393a-5daf-411d-8704-d4aa26fdd0ca",
+          "x": 60.866011597935255,
+          "y": 28.56299477866221,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Scyzoryk z grawerunkiem",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "5592c2b5-d062-4e62-83b5-73fc43c11b9c",
+          "x": 82.89473018487789,
+          "y": 48.224199319444,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "03a41bac-a6eb-4c3f-925c-0729add2de8a",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "a011fabf-15b0-4903-ac13-cdcaec449d02",
+          "x": 16.812871285458915,
+          "y": 48.059725144857346,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "e6c2cd74-4b3a-40d3-b4b8-1f4b7ea7b715",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "4478de01-d040-4921-84a4-8222e3dade4b",
+          "x": 39.61987628977916,
+          "y": 75.52683098755067,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830101"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "0964393a-5daf-411d-8704-d4aa26fdd0ca",
+          "x": 62.42689735598134,
+          "y": 35.55972401550626,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Scyzoryk z grawerunkiem",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-bf5120fe-e8c7-48c4-abf9-34cffa6fbfec-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-bf5120fe-e8c7-48c4-abf9-34cffa6fbfec-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "03a41bac-a6eb-4c3f-925c-0729add2de8a",
+      "name": "20260413_153733",
+      "imageUrl": "assets/03a41bac-a6eb-4c3f-925c-0729add2de8a-gwizdek z orłem.png",
+      "imageFileName": "gwizdek z orłem.png",
+      "hotspots": [
+        {
+          "id": "4ab722c7-f5a7-4e40-a158-12f7723fbc6c",
+          "x": 63.7846778420841,
+          "y": 49.50014999489379,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "7306853b-d283-4a80-a2aa-5d5eceeb017b"
+        },
+        {
+          "id": "db838c0e-a0f9-4d14-b59e-d5a57cd1bf99",
+          "x": 37.16703078326057,
+          "y": 47.931522543913395,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "bf5120fe-e8c7-48c4-abf9-34cffa6fbfec",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3ec856f1-6449-46b3-a2de-75235ee2eb6d",
+          "x": 49.10130677155378,
+          "y": 88.69371691386169,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "18992f36-b4dc-43dc-ae4f-e2762ed5b446",
+          "x": 43.42104914445984,
+          "y": 38.355775948670725,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Gwizdek z grawerunkiem.",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "57ce6ebe-5cdc-4f58-9ee2-5ca83c1b6abe",
+          "x": 87.57309059760722,
+          "y": 47.56630262109738,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "targetSceneId": "7306853b-d283-4a80-a2aa-5d5eceeb017b"
+        },
+        {
+          "id": "9d23e8bf-8ebb-4d17-a61d-6117f03a823f",
+          "x": 10.38011969475036,
+          "y": 47.23735427192407,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "bf5120fe-e8c7-48c4-abf9-34cffa6fbfec",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "9ee833dc-2e17-4164-b04d-056ab54a4307",
+          "x": 61.54970979793269,
+          "y": 75.36235229555967,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "18992f36-b4dc-43dc-ae4f-e2762ed5b446",
+          "x": 43.42104914445984,
+          "y": 38.355775948670725,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Gwizdek z grawerunkiem.",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileBackgroundUrl": "assets/mobile-bg-03a41bac-a6eb-4c3f-925c-0729add2de8a-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundUrl": "assets/bg-03a41bac-a6eb-4c3f-925c-0729add2de8a-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "7306853b-d283-4a80-a2aa-5d5eceeb017b",
+      "name": "20260413_153828",
+      "imageUrl": "assets/7306853b-d283-4a80-a2aa-5d5eceeb017b-jakieś srebrne coś.png",
+      "imageFileName": "jakieś srebrne coś.png",
+      "hotspots": [
+        {
+          "id": "20c297f2-14ed-460c-858a-8875969178d9",
+          "x": 60.84350137149587,
+          "y": 49.50014999489379,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "de4e0199-acd5-4918-ad00-a983812e69bf",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "7749cce1-10e5-45b9-afdb-689e11fa101e",
+          "x": 38.34350137149586,
+          "y": 48.192960452410134,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "03a41bac-a6eb-4c3f-925c-0729add2de8a",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "fd410915-5ea1-4bac-8d5e-673d8e17685c",
+          "x": 49.07879548914293,
+          "y": 91.85309117136438,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3c446f65-44a2-478f-8d49-ec016103e84f",
+          "x": 72.07602474204417,
+          "y": 35.395249840919604,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Przybliżenie na gwizdek.",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "b9aa1107-b61d-4532-99c1-a5403ad043bd",
+          "x": 79.38596389080136,
+          "y": 44.77025068793292,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "de4e0199-acd5-4918-ad00-a983812e69bf",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "5c9906db-ee70-43e0-8140-9c92916f1a12",
+          "x": 17.690058843507558,
+          "y": 45.428142868875206,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "03a41bac-a6eb-4c3f-925c-0729add2de8a",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "b87be230-99c6-4b6a-8b45-9f5458a25771",
+          "x": 54.23977064917549,
+          "y": 79.80314145718634,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#83011b"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3c446f65-44a2-478f-8d49-ec016103e84f",
+          "x": 72.07602474204417,
+          "y": 35.395249840919604,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "infoTitle": "Przybliżenie na gwizdek.",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-7306853b-d283-4a80-a2aa-5d5eceeb017b-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-7306853b-d283-4a80-a2aa-5d5eceeb017b-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "de4e0199-acd5-4918-ad00-a983812e69bf",
+      "name": "20260413_153842",
+      "imageUrl": "assets/de4e0199-acd5-4918-ad00-a983812e69bf-orzeł na rączce bez tła.png",
+      "imageFileName": "orzeł na rączce bez tła.png",
+      "hotspots": [
+        {
+          "id": "d9a00aa8-924f-4722-a692-ecaf8a583ed8",
+          "x": 36.9130168241613,
+          "y": 53.397950814440364,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "7306853b-d283-4a80-a2aa-5d5eceeb017b",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "3fbc3457-2738-4ca9-82d4-8a7b48c30422",
+          "x": 50.89869322844622,
+          "y": 91.01760038347628,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830101"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "f700f5ad-aa05-4e0a-9bd5-3b03da087457",
+          "x": 22.953216315563296,
+          "y": 47.56630262109738,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "7306853b-d283-4a80-a2aa-5d5eceeb017b",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "d507edda-3696-4013-b8eb-858f257bfedc",
+          "x": 46.34503444109188,
+          "y": 80.78998650470628,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830101"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "backgroundUrl": "assets/bg-de4e0199-acd5-4918-ad00-a983812e69bf-Zrzut ekranu 2026-04-21 200940.png",
+      "backgroundFileName": "Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundUrl": "assets/mobile-bg-de4e0199-acd5-4918-ad00-a983812e69bf-Zrzut ekranu 2026-04-21 200940.png",
+      "mobileBackgroundFileName": "Zrzut ekranu 2026-04-21 200940.png"
+    },
+    {
+      "id": "a6bd6829-7c73-40f5-ba7f-3f67661e963f",
+      "name": "7",
+      "imageUrl": "assets/a6bd6829-7c73-40f5-ba7f-3f67661e963f-7.jpg",
+      "imageFileName": "7.jpg",
+      "hotspots": [
+        {
+          "id": "e62025d1-714e-4a9c-991e-612ae52c70eb",
+          "x": 39.7875761334968,
+          "y": 49.187546339841646,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Operacja ,,Market - Garden\" Insygnia",
+          "infoText": "Insygnia jednostek powietrzno-desantowych, biorących udział \nw operacji ,,Market-Garden” we wrześniu  1944 roku w Holandii.\n\nU góry: Insygnia 1.Samodzielnej Brygady Spadochronowej:\nOd lewej: \n•\tOrzeł metalowy noszony m.in. na beretach 1.SBS \n•\tZwykły Znak Spadochronowy nadawany po ukończeniu kursu spadochronowego, \n•\tBojowy Znak Szybowcowy, nadawany polskim uczestnikom bitwy pod Arnhem,     lądujących rzutem szybowcowym, a nie mających ukończonego kursu spadochronowego \n•\tOrzeł haftowany na beret\n•\tZestaw insygniów Samodzielnej Kompanii Grenadierów (dodatkowo)\nPoniżej:\n•\tPatki kołnierzowe 1.SBS , ostatnia  - patka Samodzielnej Kompanii Grenadierów\nNa dole: Insygnia i beret alianckich oddziałów powietrzno-desantowych, biorących razem          z Polakami udział w operacji ,,Market-Garden” we wrześniu 1944 roku.\nOd lewej:\n•\tInsygnia brytyjskiej 1.Dywizji Powietrznodesantowej (1.Airborne Division)\n•\tInsygnia pułków szybowcowych\n•\tBeret jednego z pułków spadochronowych tej dywizji \n•\tInsygnia amerykańskich dywizji  powietrznodesantowych: 82nd Airborne Division           ,,All American”  i 101st Airborne Division ,,Skreaming Eagles”"
+        },
+        {
+          "id": "f9aa9091-7319-402c-81e9-c6a3c386f13e",
+          "x": 13.153595585219835,
+          "y": 49.47803376815626,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "d383c989-6ebe-4852-97f4-9560b5cd888d",
+          "x": 86.5196060611854,
+          "y": 50.34948807464894,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#830128"
+          },
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "f92e3bf3-55a9-4baf-b051-8e9d1cdd1d11",
+          "x": 13.157894736842104,
+          "y": 34.42119105614664,
+          "type": "info",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "transitionType": "global",
+          "transitionDuration": null,
+          "infoTitle": "Operacja ,,Market - Garden\" Insygnia",
+          "infoText": "Insygnia jednostek powietrzno-desantowych, biorących udział \nw operacji ,,Market-Garden” we wrześniu  1944 roku w Holandii.\n\nU góry: Insygnia 1.Samodzielnej Brygady Spadochronowej:\nOd lewej: \n•\tOrzeł metalowy noszony m.in. na beretach 1.SBS \n•\tZwykły Znak Spadochronowy nadawany po ukończeniu kursu spadochronowego, \n•\tBojowy Znak Szybowcowy, nadawany polskim uczestnikom bitwy pod Arnhem,     lądujących rzutem szybowcowym, a nie mających ukończonego kursu spadochronowego \n•\tOrzeł haftowany na beret\n•\tZestaw insygniów Samodzielnej Kompanii Grenadierów (dodatkowo)\nPoniżej:\n•\tPatki kołnierzowe 1.SBS , ostatnia  - patka Samodzielnej Kompanii Grenadierów\nNa dole: Insygnia i beret alianckich oddziałów powietrzno-desantowych, biorących razem          z Polakami udział w operacji ,,Market-Garden” we wrześniu 1944 roku.\nOd lewej:\n•\tInsygnia brytyjskiej 1.Dywizji Powietrznodesantowej (1.Airborne Division)\n•\tInsygnia pułków szybowcowych\n•\tBeret jednego z pułków spadochronowych tej dywizji \n•\tInsygnia amerykańskich dywizji  powietrznodesantowych: 82nd Airborne Division           ,,All American”  i 101st Airborne Division ,,Skreaming Eagles”"
+        },
+        {
+          "id": "f81b8caf-5928-4a59-b9d3-c7e853fe0e83",
+          "x": 47.807019058466935,
+          "y": 71.90840818145293,
+          "type": "dir-down",
+          "style": {
+            "variant": "square",
+            "color": "#830128"
+          },
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "transitionType": "global",
+          "transitionDuration": null
+        },
+        {
+          "id": "873dad4a-fb25-46ae-8b73-498c330823f8",
+          "x": 6.842105263157896,
+          "y": 48.779923672950154,
+          "type": "dir-left",
+          "style": {
+            "variant": "square",
+            "color": "#018333"
+          },
+          "targetSceneId": "17010162-2d99-40a4-942d-3e43ef94d7e6",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "9e7da14c-9ef9-4316-93eb-39b89677665d",
+      "name": "9",
+      "imageUrl": "assets/9e7da14c-9ef9-4316-93eb-39b89677665d-9.jpg",
+      "imageFileName": "9.jpg",
+      "hotspots": [
+        {
+          "id": "24825748-f555-49d7-a6d8-3c7f917859e7",
+          "x": 66.91175870004463,
+          "y": 51.80192521622201,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#830122"
+          },
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ],
+      "mobileHotspots": [
+        {
+          "id": "30c8b743-dd5f-4b1b-ad71-7e10d939edf5",
+          "x": 89.32748177558643,
+          "y": 47.73077679568404,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#830122"
+          },
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    },
+    {
+      "id": "6dcfa004-f8d3-4869-9ab9-ffbd486da470",
+      "name": "DO DRUKARNI 303 RGB 72 x 182 cm) (Film TikTok)",
+      "imageUrl": "assets/6dcfa004-f8d3-4869-9ab9-ffbd486da470-DO DRUKARNI 303 RGB 72 x 182 cm) (Film TikTok).png",
+      "imageFileName": "DO DRUKARNI 303 RGB 72 x 182 cm) (Film TikTok).png",
+      "hotspots": [],
+      "mobileHotspots": [
+        {
+          "id": "9df78812-0262-4a94-9cda-55a9ed70d16b",
+          "x": 69.73683650473853,
+          "y": 81.61235286023522,
+          "type": "dir-right",
+          "style": {
+            "variant": "square",
+            "color": "#018333",
+            "size": 61
+          },
+          "targetSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+          "transitionType": "global",
+          "transitionDuration": null
+        }
+      ]
+    }
+  ],
+  "initialSceneId": "01d62f07-3b02-49e0-bb17-8bed0f521f7e",
+  "mobileInitialSceneId": "6dcfa004-f8d3-4869-9ab9-ffbd486da470"
+};
+        
+        let currentSceneId = null;
+        let isMobile = window.innerWidth <= 768;
+        let audio = null;
+        let isPlaying = false;
+        
+        const homeScreen = document.getElementById('home-screen');
+        const exhibitContainer = document.getElementById('exhibit-container');
+        const imagesContainer = document.getElementById('images-container');
+        const fadeOverlay = document.getElementById('fade-overlay');
+        const startBtn = document.getElementById('start-btn');
+        const infoModal = document.getElementById('info-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalText = document.getElementById('modal-text');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const audioToggle = document.getElementById('audio-toggle');
+        const speakBtn = document.getElementById('speak-btn');
+        
+        let ttsUtterance = null;
+        let isTTSPlaying = false;
+
+        // Handle Audio
+        if (config.audioUrl) {
+            audio = new Audio(config.audioUrl);
+            audio.loop = true;
+            audioToggle.classList.add('visible');
+            
+            audioToggle.addEventListener('click', () => {
+                if (isPlaying) {
+                    audio.pause();
+                    audioToggle.style.opacity = '0.5';
+                } else {
+                    audio.play();
+                    audioToggle.style.opacity = '1';
+                }
+                isPlaying = !isPlaying;
+            });
+        }
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            const newIsMobile = window.innerWidth <= 768;
+            if (newIsMobile !== isMobile) {
+                isMobile = newIsMobile;
+                updateImagesForDevice();
+            }
+        });
+
+        // Icons SVG definitions
+        const icons = {
+            'nav': '<circle cx="12" cy="12" r="10"/><path d="m12 16 4-4-4-4"/><path d="M8 12h8"/>',
+            'dir-left': '<path d="m15 18-6-6 6-6"/>',
+            'dir-right': '<path d="m9 18 6-6-6-6"/>',
+            'dir-up': '<path d="m18 15-6-6-6 6"/>',
+            'dir-down': '<path d="m6 9 6 6 6-6"/>',
+            'info': '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
+            'zoom': '<circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/>',
+            'link': '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>'
+        };
+
+        // DOM elements
+        const sceneElements = {};
+        
+        function updateImagesForDevice() {
+            config.scenes.forEach(scene => {
+                if (sceneElements[scene.id]) {
+                    sceneElements[scene.id].img.src = (isMobile && scene.mobileImageUrl) ? scene.mobileImageUrl : scene.imageUrl;
+                    renderHotspotsInto(scene, sceneElements[scene.id].hsContainer);
+                }
+            });
+        }
+
+        config.scenes.forEach(scene => {
+            const container = document.createElement('div');
+            container.className = 'scene-wrapper';
+            container.id = 'scene-' + scene.id;
+
+            const img = new Image();
+            img.src = (isMobile && scene.mobileImageUrl) ? scene.mobileImageUrl : scene.imageUrl;
+            img.className = 'scene-image';
+            img.id = 'img-' + scene.id;
+
+            const hsContainer = document.createElement('div');
+            hsContainer.className = 'scene-hotspots';
+            hsContainer.id = 'hotspots-' + scene.id;
+
+            container.appendChild(img);
+            container.appendChild(hsContainer);
+            imagesContainer.appendChild(container);
+            
+            sceneElements[scene.id] = { container, img, hsContainer };
+
+            // Pre-render hotspots
+            renderHotspotsInto(scene, hsContainer);
+        });
+
+        startBtn.addEventListener('click', () => {
+            const tType = config.theme.initialTransitionType || 'none';
+            const tDur = config.theme.initialTransitionDuration !== undefined ? config.theme.initialTransitionDuration : 0.5;
+            
+            if (audio && !isPlaying) {
+                audio.play().catch(e => console.log("Audio autoplay prevented"));
+                isPlaying = true;
+                audioToggle.style.opacity = '1';
+            }
+            
+            homeScreen.style.transition = `all ${tDur}s ease-in-out`;
+            exhibitContainer.style.transition = `all ${tDur}s ease-in-out`;
+            
+            let startSceneId = config.initialSceneId;
+            if (isMobile && config.mobileInitialSceneId) {
+                startSceneId = config.mobileInitialSceneId;
+            }
+            if (!startSceneId && config.scenes.length > 0) {
+                startSceneId = config.scenes[0].id;
+            }
+            
+            if (tType === 'none') {
+                homeScreen.style.display = 'none';
+                exhibitContainer.style.transition = 'none';
+                exhibitContainer.classList.add('active');
+                if (startSceneId) loadScene(startSceneId, 'global', null, true);
+            } else if (tType === 'fade-black') {
+                const halfDur = tDur / 2;
+                fadeOverlay.style.transition = `opacity ${halfDur}s ease-in-out`;
+                fadeOverlay.style.opacity = '1';
+                
+                setTimeout(() => {
+                    homeScreen.style.display = 'none';
+                    exhibitContainer.style.transition = 'none';
+                    exhibitContainer.classList.add('active');
+                    if (startSceneId) loadScene(startSceneId, 'global', null, true);
+                    
+                    fadeOverlay.style.opacity = '0';
+                }, halfDur * 1000);
+            } else if (tType === 'slide') {
+                homeScreen.style.transform = 'translateX(-100%)';
+                exhibitContainer.style.transition = 'none';
+                exhibitContainer.style.transform = 'translateX(100%)';
+                exhibitContainer.classList.add('active');
+                
+                setTimeout(() => {
+                    exhibitContainer.style.transition = `transform ${tDur}s ease-in-out`;
+                    exhibitContainer.style.transform = 'translateX(0)';
+                }, 50);
+
+                if (startSceneId) loadScene(startSceneId, 'global', null, true);
+                
+                setTimeout(() => {
+                    homeScreen.style.display = 'none';
+                }, tDur * 1000);
+            } else { // fade or mix
+                homeScreen.style.opacity = '0';
+                exhibitContainer.classList.add('active');
+                
+                if (startSceneId) loadScene(startSceneId, 'global', null, true);
+                
+                setTimeout(() => {
+                    homeScreen.style.display = 'none';
+                }, tDur * 1000);
+            }
+        });
+
+        function handleHotspotClick(hotspot) {
+            if (['nav', 'dir-left', 'dir-right', 'dir-up', 'dir-down', 'zoom'].includes(hotspot.type) || (hotspot.type === 'image' && hotspot.actionType === 'nav')) {
+                if (hotspot.targetSceneId) {
+                    loadScene(hotspot.targetSceneId, hotspot.transitionType, hotspot.transitionDuration);
+                }
+            } else if (hotspot.type === 'info' || (hotspot.type === 'image' && hotspot.actionType === 'info')) {
+                modalTitle.textContent = hotspot.infoTitle || 'Information';
+                let text = hotspot.infoText || '';
+                
+                // Replace image placeholders with actual image tags
+                if (hotspot.infoImages && hotspot.infoImages.length > 0) {
+                    hotspot.infoImages.forEach(img => {
+                        const targetStr = '[image:' + img.id + ']';
+                        const imgTag = '<img src="' + img.url + '" style="max-width: 100%; border-radius: 8px; margin: 10px 0; display: block;" alt="description image" />';
+                        text = text.split(targetStr).join(imgTag);
+                    });
+                }
+                
+                // Convert newlines to breaks for proper paragraphing
+                text = text.replace(/\r?\n/g, '<br/>');
+                
+                modalText.innerHTML = text;
+                infoModal.classList.add('active');
+            } else if (hotspot.type === 'link' || (hotspot.type === 'image' && hotspot.actionType === 'link')) {
+                if (hotspot.linkUrl) {
+                    window.open(hotspot.linkUrl, '_blank');
+                }
+            }
+        }
+
+        let transitionTimeout = null;
+
+        function loadScene(sceneId, overrideTransitionType = 'global', overrideDuration = null, isInitial = false) {
+            if (!sceneId) return;
+            
+            let transitionType = (overrideTransitionType && overrideTransitionType !== 'global') 
+                ? overrideTransitionType 
+                : (config.theme.transitionType || 'fade');
+
+            let rawDuration = overrideDuration !== null && overrideDuration !== undefined
+                ? overrideDuration 
+                : config.theme.transitionDuration;
+                
+            if (isInitial) {
+                transitionType = config.theme.initialTransitionType || 'none';
+                if (config.theme.initialTransitionDuration !== undefined) {
+                    rawDuration = config.theme.initialTransitionDuration;
+                }
+            }
+
+            if (rawDuration === undefined) rawDuration = 0.5;
+
+            const dur = parseFloat(rawDuration);
+
+            // Clear any pending transitions if user clicks quickly
+            if (transitionTimeout) clearTimeout(transitionTimeout);
+
+            const targetSceneConf = config.scenes.find(s => s.id === sceneId);
+            
+            // Set dynamic background image for exhibit container
+            let sceneBg = isMobile 
+                ? (targetSceneConf && targetSceneConf.mobileBackgroundUrl ? targetSceneConf.mobileBackgroundUrl : (targetSceneConf && targetSceneConf.backgroundUrl ? targetSceneConf.backgroundUrl : config.theme.mobileBackgroundImageUrl || config.theme.backgroundImageUrl))
+                : (targetSceneConf && targetSceneConf.backgroundUrl ? targetSceneConf.backgroundUrl : config.theme.backgroundImageUrl);
+                
+            if (sceneBg) {
+                exhibitContainer.style.backgroundImage = `url('${sceneBg}')`;
+                exhibitContainer.style.backgroundSize = 'cover';
+                exhibitContainer.style.backgroundPosition = 'center';
+            } else {
+                exhibitContainer.style.backgroundImage = 'none';
+            }
+
+            const oldEls = currentSceneId ? sceneElements[currentSceneId] : null;
+            const newEls = sceneElements[sceneId];
+            
+            const oldContainer = oldEls ? oldEls.container : null;
+            const newContainer = newEls ? newEls.container : null;
+            
+            // 1. Instantly hide any containers that aren't the old or the new
+            Object.values(sceneElements).forEach(els => {
+                if (els.container !== oldContainer && els.container !== newContainer) {
+                    els.container.style.transition = 'none';
+                    els.container.style.opacity = '0';
+                    els.container.style.transform = 'none';
+                    els.container.style.zIndex = '1';
+                    els.container.style.pointerEvents = 'none';
+                }
+            });
+            
+            // 2. Prep new container starting positions
+            if (newContainer) {
+                newContainer.style.transition = 'none';
+                if (transitionType === 'slide') {
+                    newContainer.style.transform = 'translateX(100%)';
+                    newContainer.style.opacity = '1';
+                } else if (transitionType === 'fade' || transitionType === 'mix' || transitionType === 'fade-black') {
+                    newContainer.style.transform = 'none';
+                    newContainer.style.opacity = '0';
+                } else {
+                    newContainer.style.transform = 'none';
+                    newContainer.style.opacity = '1';
+                }
+                newContainer.style.zIndex = '2'; // new comes on top
+                newContainer.style.pointerEvents = 'auto'; // allow clicks
+            }
+
+            if (oldContainer && oldContainer !== newContainer) {
+                oldContainer.style.zIndex = '1'; 
+                // Don't allow clicks on the old one while it's transitioning away
+                oldContainer.style.pointerEvents = 'none'; 
+            }
+
+            // Force reflow so DOM updates visually before we animate
+            void imagesContainer.offsetWidth;
+            
+            currentSceneId = sceneId;
+
+            // 3. Launch transitions
+            if (transitionType === 'slide') {
+                if (newContainer) {
+                    newContainer.style.transition = `transform ${dur}s ease-in-out`;
+                    newContainer.style.transform = 'translateX(0)';
+                }
+                if (oldContainer && oldContainer !== newContainer) {
+                    oldContainer.style.transition = `transform ${dur}s ease-in-out`;
+                    oldContainer.style.transform = 'translateX(-100%)';
+                }
+            } else if (transitionType === 'mix') {
+                if (newContainer) {
+                    newContainer.style.transition = `opacity ${dur}s ease-in-out`;
+                    newContainer.style.opacity = '1';
+                }
+                if (oldContainer && oldContainer !== newContainer) {
+                    oldContainer.style.transition = `opacity ${dur}s ease-in-out`;
+                    oldContainer.style.opacity = '0';
+                }
+            } else if (transitionType === 'fade') {
+                const halfDur = dur / 2;
+                if (oldContainer && oldContainer !== newContainer) {
+                    oldContainer.style.transition = `opacity ${halfDur}s ease-in-out`;
+                    oldContainer.style.opacity = '0';
+                }
+                if (newContainer) {
+                    setTimeout(() => {
+                        newContainer.style.transition = `opacity ${halfDur}s ease-in-out`;
+                        newContainer.style.opacity = '1';
+                    }, halfDur * 1000);
+                }
+            } else if (transitionType === 'fade-black') {
+                const halfDur = dur / 2;
+                fadeOverlay.style.transition = `opacity ${halfDur}s ease-in-out`;
+                fadeOverlay.style.opacity = '1';
+                
+                setTimeout(() => {
+                    if (oldContainer && oldContainer !== newContainer) {
+                        oldContainer.style.transition = 'none';
+                        oldContainer.style.opacity = '0';
+                    }
+                    if (newContainer) {
+                        newContainer.style.transition = 'none';
+                        newContainer.style.opacity = '1';
+                    }
+                    
+                    fadeOverlay.style.opacity = '0';
+                }, halfDur * 1000);
+            } else {
+                if (newContainer) {
+                    newContainer.style.transition = 'none';
+                    newContainer.style.opacity = '1';
+                }
+                if (oldContainer && oldContainer !== newContainer) {
+                    oldContainer.style.transition = 'none';
+                    oldContainer.style.opacity = '0';
+                }
+            }
+        }
+
+        function renderHotspotsInto(scene, container) {
+            container.innerHTML = '';
+            const hotspotsToRender = isMobile 
+                ? (scene.mobileHotspots || []) 
+                : scene.hotspots;
+
+            hotspotsToRender.forEach(hotspot => {
+                const el = document.createElement('div');
+                el.className = 'hotspot';
+                el.style.pointerEvents = 'auto'; // allow clicking
+                
+                // Apply custom styles
+                const size = hotspot.style?.size || config.theme.hotspotSize;
+                const color = hotspot.style?.color || config.theme.color;
+                const bgOpacity = hotspot.style?.bgOpacity !== undefined ? hotspot.style.bgOpacity : 0.2;
+                const borderWidth = hotspot.style?.borderWidth !== undefined ? hotspot.style.borderWidth : 2;
+                const rotation = hotspot.style?.rotation || 0;
+                const variant = hotspot.style?.variant || config.theme.style || 'modern';
+                
+                const isSquare = variant === 'square';
+                const isNeon = variant === 'neon';
+                const isClassic = variant === 'classic';
+
+                el.style.left = hotspot.x + '%';
+                el.style.top = hotspot.y + '%';
+                el.style.width = size + 'px';
+                el.style.height = size + 'px';
+                el.style.borderRadius = isSquare ? '10px' : '50%';
+                
+                // Convert hex to rgba for background
+                let r=0, g=0, b=0;
+                if (color.startsWith('#')) {
+                    const hex = color.replace('#', '');
+                    if (hex.length === 3) {
+                        r = parseInt(hex.charAt(0) + hex.charAt(0), 16);
+                        g = parseInt(hex.charAt(1) + hex.charAt(1), 16);
+                        b = parseInt(hex.charAt(2) + hex.charAt(2), 16);
+                    } else if (hex.length === 6) {
+                        r = parseInt(hex.substring(0,2), 16);
+                        g = parseInt(hex.substring(2,4), 16);
+                        b = parseInt(hex.substring(4,6), 16);
+                    }
+                }
+                
+                const rgbaBg = `rgba(${r},${g},${b},${bgOpacity})`;
+
+                if (isClassic) {
+                    el.style.backgroundColor = color;
+                    el.style.borderColor = 'white';
+                    el.style.borderWidth = Math.max(borderWidth, 3) + 'px';
+                    el.style.color = 'white';
+                    el.style.boxShadow = `0 0 0 3px rgba(0,0,0,0.6), 0 6px 20px rgba(0,0,0,0.7), 0 0 18px ${color}88`;
+                    el.style.filter = 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))';
+                } else if (isNeon) {
+                    el.style.backgroundColor = 'transparent';
+                    el.style.borderColor = color;
+                    el.style.borderWidth = borderWidth + 'px';
+                    el.style.color = color;
+                    el.style.boxShadow = `0 0 10px ${color}, inset 0 0 10px ${color}`;
+                } else if (variant === 'minimal') {
+                    el.style.backgroundColor = 'rgba(0,0,0,0.45)';
+                    el.style.borderColor = color;
+                    el.style.borderWidth = '2px';
+                    el.style.color = color;
+                    el.style.boxShadow = `0 0 0 2px rgba(0,0,0,0.5), 0 4px 14px rgba(0,0,0,0.7), 0 0 14px ${color}66`;
+                    el.style.backdropFilter = 'blur(3px)';
+                } else if (variant === 'glass') {
+                    el.style.backgroundColor = `rgba(${r},${g},${b},0.2)`;
+                    el.style.borderColor = 'rgba(255,255,255,0.4)';
+                    el.style.borderWidth = '1px';
+                    el.style.color = color;
+                    el.style.backdropFilter = 'blur(4px)';
+                    el.style.webkitBackdropFilter = 'blur(4px)';
+                    el.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+                } else if (variant === 'dashed') {
+                    el.style.backgroundColor = 'transparent';
+                    el.style.borderColor = color;
+                    el.style.borderStyle = 'dashed';
+                    el.style.borderWidth = Math.max(borderWidth, 2) + 'px';
+                    el.style.color = color;
+                    el.style.boxShadow = 'none';
+                } else {
+                    el.style.backgroundColor = color;
+                    el.style.borderColor = 'white';
+                    el.style.borderWidth = Math.max(borderWidth, 3) + 'px';
+                    el.style.color = 'white';
+                    el.style.boxShadow = `0 0 0 3px rgba(0,0,0,0.6), 0 6px 20px rgba(0,0,0,0.7), 0 0 18px ${color}88`;
+                    el.style.filter = 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))';
+                }
+                
+                const hasLabel = (hotspot.type === 'link' || hotspot.type === 'image') && hotspot.label;
+                const isImage = hotspot.type === 'image';
+
+                if (isImage) {
+                    el.style.width = 'auto';
+                    el.style.height = 'auto';
+                    el.style.padding = '0';
+                    el.style.borderRadius = '0';
+                    el.style.backgroundColor = 'transparent';
+                    el.style.borderColor = 'transparent';
+                    el.style.boxShadow = 'none';
+                    el.style.borderWidth = '0';
+                    el.style.transform = 'translate(-50%, -50%)';
+                    
+                    let bgImg = hotspot.imageUrl;
+                    let imageHtml = bgImg ? `<img src="${bgImg}" alt="" style="max-width: 100px; max-height: 100px; object-fit: contain; pointer-events: none;" />` : `<div style="font-size: 10px; padding: 8px; border: 1px dashed gray; border-radius: 4px; background: rgba(0,0,0,0.5); color: white;">No Image</div>`;
+                    
+                    if (hasLabel) {
+                        el.innerHTML = `<div style="transform: rotate(${rotation}deg); display: flex; flex-direction: column; align-items: center;">
+                            ${imageHtml}
+                            <span style="font-size: ${Math.max(12, size * 0.3)}px; font-weight: 500; font-family: sans-serif; margin-top: 4px; color: white; text-shadow: 0 1px 3px black;">${hotspot.label}</span>
+                        </div>`;
+                    } else {
+                        el.innerHTML = `<div style="transform: rotate(${rotation}deg); display: flex; align-items: center; justify-content: center;">${imageHtml}</div>`;
+                    }
+                } else if (hasLabel) {
+                    el.style.width = 'auto';
+                    el.style.minWidth = size + 'px';
+                    el.style.height = 'auto';
+                    el.style.minHeight = size + 'px';
+                    el.style.padding = '4px 16px';
+                    el.style.borderRadius = (size/2) + 'px';
+                    el.style.whiteSpace = 'nowrap';
+                    
+                    el.innerHTML = `<div style="transform: rotate(${rotation}deg); display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 100%;">
+                        <div style="width: ${size * 0.5}px; height: ${size * 0.5}px; display: flex; align-items: center; justify-content: center;">
+                            <svg viewBox="0 0 24 24" style="width: 100%; height: 100%;">${icons[hotspot.type] || icons['nav']}</svg>
+                        </div>
+                        <span style="font-size: ${Math.max(12, size * 0.3)}px; font-weight: 500; font-family: sans-serif;">${hotspot.label}</span>
+                    </div>`;
+                } else {
+                    // Handle rotation on the inner SVG wrapper to not mess up the translate(-50%, -50%)
+                    el.innerHTML = `<div style="transform: rotate(${rotation}deg); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+                        <svg viewBox="0 0 24 24">${icons[hotspot.type] || icons['nav']}</svg>
+                    </div>`;
+                }
+
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    handleHotspotClick(hotspot);
+                });
+                
+                // Hover effect
+                el.addEventListener('mouseenter', () => {
+                    if (isClassic || (!isNeon && variant !== 'glass' && variant !== 'dashed' && variant !== 'minimal')) {
+                        el.style.backgroundColor = 'white';
+                        el.style.color = color;
+                        el.style.filter = `drop-shadow(0 2px 12px ${color})`;
+                    } else if (isNeon) {
+                        el.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                    } else if (variant === 'minimal') {
+                        el.style.backgroundColor = `rgba(${r},${g},${b},0.3)`;
+                    } else {
+                        el.style.backgroundColor = color;
+                        el.style.color = '#000';
+                    }
+                });
+                el.addEventListener('mouseleave', () => {
+                    if (isClassic || (!isNeon && variant !== 'glass' && variant !== 'dashed' && variant !== 'minimal')) {
+                        el.style.backgroundColor = color;
+                        el.style.color = 'white';
+                        el.style.filter = 'drop-shadow(0 2px 8px rgba(0,0,0,0.8))';
+                    } else if (isNeon) {
+                        el.style.backgroundColor = 'transparent';
+                    } else if (variant === 'minimal') {
+                        el.style.backgroundColor = 'rgba(0,0,0,0.45)';
+                    } else {
+                        el.style.backgroundColor = rgbaBg;
+                        el.style.color = color;
+                    }
+                });
+                
+                container.appendChild(el);
+            });
+        }
+
+        function stopTTS() {
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+            }
+            isTTSPlaying = false;
+            speakBtn.classList.remove('playing');
+        }
+
+        speakBtn.addEventListener('click', () => {
+            if (!('speechSynthesis' in window)) {
+                alert("Text-to-speech is not supported in this browser.");
+                return;
+            }
+
+            if (isTTSPlaying) {
+                stopTTS();
+                return;
+            }
+
+            const textToRead = (modalTitle.textContent || '') + ". " + (modalText.textContent || '');
+            if (!textToRead.trim()) return;
+
+            // Stop background music temporarily if playing
+            let wasMusicPlaying = isPlaying;
+            if (wasMusicPlaying && audio) {
+                audio.pause();
+                audioToggle.style.opacity = '0.5';
+            }
+
+            stopTTS(); // clear any previous
+            
+            ttsUtterance = new SpeechSynthesisUtterance(textToRead);
+            // Optional: try to auto-detect language based on config or user browser
+            ttsUtterance.lang = navigator.language || 'en-US';
+            
+            ttsUtterance.onend = () => {
+                isTTSPlaying = false;
+                speakBtn.classList.remove('playing');
+                // Resume background music if it was playing
+                if (wasMusicPlaying && audio) {
+                    audio.play().catch(e => console.log(e));
+                    audioToggle.style.opacity = '1';
+                }
+            };
+            
+            ttsUtterance.onerror = () => {
+                isTTSPlaying = false;
+                speakBtn.classList.remove('playing');
+            };
+
+            window.speechSynthesis.speak(ttsUtterance);
+            isTTSPlaying = true;
+            speakBtn.classList.add('playing');
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            stopTTS();
+            infoModal.classList.remove('active');
+        });
+        
+        infoModal.addEventListener('click', (e) => {
+            if (e.target === infoModal) {
+                stopTTS();
+                infoModal.classList.remove('active');
+            }
+        });
+
+    </script>
+</body>
+</html>
